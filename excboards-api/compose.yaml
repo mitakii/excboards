@@ -1,0 +1,7 @@
+﻿services:
+  excboards-api:
+    image: excboards-api
+    build:
+      context: .
+      dockerfile: excboards-api/Dockerfile
+
