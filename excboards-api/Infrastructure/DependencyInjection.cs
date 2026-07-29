@@ -1,7 +1,10 @@
 using Application.Auth;
+using Application.Boards;
 using Application.Interfaces;
+using Domain.Interfaces;
 using Infrastructure.Identity;
 using Infrastructure.Persistence;
+using Infrastructure.Persistence.Repositories;
 using Infrastructure.Security;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -35,6 +38,9 @@ public static class InfrastructureServiceCollectionExtensions
 
         builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("JwtOptions"));
         builder.Services.AddScoped<ITokenService, TokenService>();
+        builder.Services.AddScoped<IPermissionService, PermissionService>();
+        builder.Services.AddScoped<IBoardRepository, BoardRepository>();
+        builder.Services.AddScoped<BoardService>();
         builder.Services.AddHostedService<RefreshTokenCleanupService>();
 
         return builder;
