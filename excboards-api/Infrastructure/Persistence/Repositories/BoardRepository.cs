@@ -24,11 +24,11 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
         return context.SaveChangesAsync();
     }
 
-    public Task<UserBoard?> GetByIdAsync(Guid id)
+    public Task<UserBoard?> GetByIdAsync(Guid userId, Guid id)
     {
         return context.UserBoards
-            .AsNoTracking()
-            .FirstOrDefaultAsync(ub => ub.Id == id);
+            .Include(ub => ub.Tags)
+            .FirstOrDefaultAsync(ub => ub.Id == id && ub.UserId == userId);
     }
 
     public Task<List<UserBoard>> GetAllByUserIdAsync(Guid userId)
@@ -39,13 +39,20 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
             .ToListAsync();
     }
 
+    public Task<bool> ExistsByNameAsync(Guid userId, string name)
+    {
+        return context.UserBoards
+            .AsNoTracking()
+            .AnyAsync(ub => ub.UserId == userId && ub.Name.ToLower() == name.ToLower());
+    }
+
     public Task<List<UserBoard>> GetByTagsAsync(IEnumerable<Tag> tags)
     {
         var tagIds = tags.Select(t => t.Id).ToList();
 
         return context.UserBoards
-            .Include(ub => ub.Tags)
             .AsNoTracking()
+            .Include(ub => ub.Tags)
             .Where(ub => tagIds.All(id => ub.Tags.Select(t => t.Id).Contains(id)))
             .ToListAsync();
     }

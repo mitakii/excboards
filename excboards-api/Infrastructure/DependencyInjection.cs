@@ -40,6 +40,7 @@ public static class InfrastructureServiceCollectionExtensions
         builder.Services.AddScoped<ITokenService, TokenService>();
         builder.Services.AddScoped<IPermissionService, PermissionService>();
         builder.Services.AddScoped<IBoardRepository, BoardRepository>();
+        builder.Services.AddScoped<ITagRepository, TagRepository>();
         builder.Services.AddScoped<BoardService>();
         builder.Services.AddHostedService<RefreshTokenCleanupService>();
 

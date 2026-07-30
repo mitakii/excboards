@@ -8,7 +8,8 @@ public interface IBoardRepository
     Task RemoveAsync(UserBoard board);
     Task UpdateAsync(UserBoard board);
     
-    Task<UserBoard?> GetByIdAsync(Guid id);
+    Task<UserBoard?> GetByIdAsync(Guid userId, Guid id);
     Task<List<UserBoard>> GetAllByUserIdAsync(Guid userId);
     Task<List<UserBoard>> GetByTagsAsync(IEnumerable<Tag> tags);
+    Task<bool> ExistsByNameAsync(Guid userId, string name);
 }

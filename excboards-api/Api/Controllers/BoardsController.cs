@@ -14,7 +14,10 @@ public class BoardsController(BoardService boardService) : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(CreateBoardRequest request)
     {
-        var boardId = await boardService.CreateBoardAsync(User.GetUserId(), request.Name, request.Description ?? string.Empty);
-        return Created(string.Empty, new { id = boardId });
+        var result = await boardService.CreateAsync(User.GetUserId(), request.Name, request.Description ?? string.Empty);
+        if (result.IsError)
+            return result.ToProblem(this);
+
+        return Ok(result.Value);
     }
 }
