@@ -1,16 +1,16 @@
+using Application.Interfaces;
+using Application.Storage;
 using Domain.Entities;
+using Domain.Exceptions;
 using Domain.Interfaces;
 using ErrorOr;
 
 namespace Application.Boards;
 
-public class BoardService(IBoardRepository boardRepository)
+public class BoardService(IBoardRepository boardRepository, IFileRepository fileRepository)
 {
-    public async Task<ErrorOr<Guid>> CreateAsync(Guid userId, string name, string description)
+    public async Task<ErrorOr<Guid>> CreateAsync(Guid userId, string name, string description, Stream stream)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            return Error.Validation("Board.Name.Empty", "Board name is required.");
-
         if (await boardRepository.ExistsByNameAsync(userId, name))
             return Error.Validation("Board.DuplicateName", "A board with this name already exists.");
 
@@ -21,15 +21,42 @@ public class BoardService(IBoardRepository boardRepository)
             Id = Guid.NewGuid(),
             UserId = userId,
             Name = name,
+            NormalizedName = name.ToLower(),
             Description = description,
             IsPublished = false,
             Created = now,
             Updated = now,
         };
 
-        await boardRepository.AddAsync(board);
+        try
+        {
+            await boardRepository.AddAsync(board);
+        }
+        catch (DuplicateBoardNameException)
+        {
+            return Error.Validation("Board.DuplicateName", "A board with this name already exists.");
+        }
 
+        await fileRepository.UploadFileAsync(BoardFileKeys.Scene(board.Id), stream);
         return board.Id;
+    }
+
+    public async Task<ErrorOr<UserBoard>> GetByIdAsync(Guid userId, Guid boardId)
+    {
+        var board = await boardRepository.GetByIdAsync(userId, boardId);
+        if (board == null)
+            return Error.NotFound("Board.NotFound", "Board not found");
+
+        return board;
+    }
+
+    public async Task<ErrorOr<Stream>> GetSceneAsync(Guid userId, Guid boardId)
+    {
+        var board = await boardRepository.GetByIdAsync(userId, boardId);
+        if (board == null)
+            return Error.NotFound("Board.NotFound", "Board not found");
+
+        return await fileRepository.GetFileAsync(BoardFileKeys.Scene(boardId));
     }
 
     public async Task<ErrorOr<Deleted>> RemoveAsync(Guid userId, Guid boardId)

@@ -1,16 +1,19 @@
 using Application.Auth;
 using Application.Boards;
 using Application.Interfaces;
+using Application.Storage;
 using Domain.Interfaces;
 using Infrastructure.Identity;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Repositories;
 using Infrastructure.Security;
+using Infrastructure.Storage;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Minio;
 
 namespace Infrastructure;
 
@@ -21,6 +24,8 @@ public static class InfrastructureServiceCollectionExtensions
         builder.Services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+        builder.Services.Configure<MinioOptions>(builder.Configuration.GetSection("Minio"));
+        
         builder.Services
             .AddIdentityCore<User>(options =>
             {
@@ -42,7 +47,11 @@ public static class InfrastructureServiceCollectionExtensions
         builder.Services.AddScoped<IBoardRepository, BoardRepository>();
         builder.Services.AddScoped<ITagRepository, TagRepository>();
         builder.Services.AddScoped<BoardService>();
+        
         builder.Services.AddHostedService<RefreshTokenCleanupService>();
+        
+        builder.Services.AddSingleton<MinioStorage>();
+        builder.Services.AddScoped<IFileRepository, MinioFileRepository>();
 
         return builder;
     }

@@ -39,6 +39,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
 
             b.HasIndex(x => x.UserId);
             b.HasIndex(x => new { x.IsPublished, x.Updated });
+            b.HasIndex(x => new { x.UserId, x.NormalizedName }).IsUnique();
 
             b.Property(x => x.Name).HasMaxLength(200);
             b.Property(x => x.Description).HasMaxLength(1000);

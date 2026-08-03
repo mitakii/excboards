@@ -9,6 +9,7 @@ public class UserBoard
     public DateTime Updated { get; set; }
     
     public string Name { get; set; }
+    public string NormalizedName { get; set; }
     public string Description { get; set; }
     
     public ICollection<Tag> Tags { get; set; } =  new List<Tag>();

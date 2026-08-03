@@ -1,15 +1,24 @@
 using Domain.Entities;
+using Domain.Exceptions;
 using Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Infrastructure.Persistence.Repositories;
 
 public class BoardRepository(AppDbContext context) : IBoardRepository
 {
-    public Task AddAsync(UserBoard board)
+    public async Task AddAsync(UserBoard board)
     {
         context.UserBoards.Add(board);
-        return context.SaveChangesAsync();
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            throw new DuplicateBoardNameException(board.UserId, board.Name);
+        }
     }
 
     public Task RemoveAsync(UserBoard board)
