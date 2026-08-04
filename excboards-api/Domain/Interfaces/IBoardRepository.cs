@@ -10,6 +10,8 @@ public interface IBoardRepository
     
     Task<UserBoard?> GetByIdAsync(Guid userId, Guid id);
     Task<List<UserBoard>> GetAllByUserIdAsync(Guid userId);
+    Task<List<UserBoard>> GetAllByUserIdPagedAsync(Guid userId, int pageNumber, int pageSize);
+    
     Task<List<UserBoard>> GetByTagsAsync(IEnumerable<Tag> tags);
     Task<bool> ExistsByNameAsync(Guid userId, string name);
 }

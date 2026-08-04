@@ -219,6 +219,7 @@ pids
 *.pid
 *.seed
 *.pid.lock
+.claude/
 
 # IDEs and editors
 .vscode/*

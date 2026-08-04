@@ -15,7 +15,7 @@ namespace excboards_api.Controllers;
 [Route("api/auth")]
 public class AuthController(
     UserManager<User> userManager,
-    SignInManager<User> signInManager,
+    IAuthService authService,
     ITokenService tokenService,
     IOptions<JwtOptions> jwtOptions) : ControllerBase
 {
@@ -34,20 +34,12 @@ public class AuthController(
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginRequest request)
     {
-        var user = await userManager.FindByNameAsync(request.Username);
-        if (user is null) return Unauthorized();
+        var result = await authService.LoginAsync(request.Username, request.Password);
+        if (result.IsError) return result.ToProblem(this);
 
-        var check = await signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true);
-        if (!check.Succeeded) return Unauthorized();
-
-        await tokenService.RevokeRefreshTokensForUserAsync(user.Id);
-
-        var roles = await userManager.GetRolesAsync(user);
-        var accessToken = await tokenService.GenerateAccessTokenAsync(user.Id, user.UserName!, user.Email!, roles);
-        var refreshToken = await tokenService.GenerateRefreshTokenAsync(user.Id);
-
-        Response.SetAuthCookies(accessToken, refreshToken, _jwtOptions);
-        return Ok(new { user.Id, user.UserName, user.Email });
+        var login = result.Value;
+        Response.SetAuthCookies(login.Tokens.AccessToken, login.Tokens.RefreshToken, _jwtOptions);
+        return Ok(new { login.UserId, login.UserName, login.Email });
     }
 
     [AllowAnonymous]

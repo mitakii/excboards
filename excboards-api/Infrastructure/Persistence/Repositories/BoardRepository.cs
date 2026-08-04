@@ -48,6 +48,15 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
             .ToListAsync();
     }
 
+    public Task<List<UserBoard>> GetAllByUserIdPagedAsync(Guid userId, int pageNumber, int pageSize)
+    {
+        return context.UserBoards
+            .Where(ub => ub.UserId == userId)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+    }
+
     public Task<bool> ExistsByNameAsync(Guid userId, string name)
     {
         return context.UserBoards

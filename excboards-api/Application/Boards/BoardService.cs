@@ -1,3 +1,4 @@
+using Application.Dto;
 using Application.Interfaces;
 using Application.Storage;
 using Domain.Entities;
@@ -96,5 +97,12 @@ public class BoardService(IBoardRepository boardRepository, IFileRepository file
         
         await boardRepository.UpdateAsync(board);
         return Result.Updated;
+    }
+    
+    
+    public async Task<ErrorOr<List<UserBoard>>> GetUserBoardResults(Guid userId, int pageNumber, int pageSize)
+    {
+        return await boardRepository
+            .GetAllByUserIdPagedAsync(userId, pageNumber, pageSize);
     }
 }

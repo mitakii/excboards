@@ -4,6 +4,7 @@ using Application.Interfaces;
 using Application.Storage;
 using Domain.Interfaces;
 using Infrastructure.Identity;
+using Infrastructure.Identity.Services;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Repositories;
 using Infrastructure.Security;
@@ -52,6 +53,9 @@ public static class InfrastructureServiceCollectionExtensions
         
         builder.Services.AddSingleton<MinioStorage>();
         builder.Services.AddScoped<IFileRepository, MinioFileRepository>();
+        
+        builder.Services.AddScoped<IUserService, UserService>();
+        builder.Services.AddScoped<IAuthService, AuthService>();
 
         return builder;
     }
