@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Application.Interfaces;
+using excboards_api.Attributes;
 using excboards_api.Contracts.User;
 using excboards_api.Extensions;
 using Microsoft.AspNetCore.Authorization;
@@ -60,6 +61,21 @@ public class UserController(IUserService userService) : ControllerBase
 
         var result = await userService
             .ChangeEmail(userId, request.NewEmail, request.Password);
+        
+        if(result.IsError)
+            result.ToProblem(this);
+        return Ok();
+    }
+    
+    [Authorize]
+    [ValidateImage(Required = false)]
+    [HttpGet("settings/changePfp")]
+    public async Task<IActionResult> ChangePfp(ChangePfpRequest request)
+    {
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.Sid), out var userId))
+            return Unauthorized();
+
+        var result = await userService.UpdatePfpAsync(userId, request.Picture, request.Password);
         
         if(result.IsError)
             result.ToProblem(this);

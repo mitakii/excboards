@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using Application.Auth;
 using Application.Interfaces;
+using ErrorOr;
+using excboards_api.Attributes;
 using excboards_api.Contracts.Auth;
 using excboards_api.Extensions;
 using Infrastructure.Identity;
@@ -17,17 +19,30 @@ public class AuthController(
     UserManager<User> userManager,
     IAuthService authService,
     ITokenService tokenService,
-    IOptions<JwtOptions> jwtOptions) : ControllerBase
+    IOptions<JwtOptions> jwtOptions,
+    ICloudinaryService cloudinaryService,
+    IUserService userService) : ControllerBase
 {
     private readonly JwtOptions _jwtOptions = jwtOptions.Value;
 
     [AllowAnonymous]
     [HttpPost("register")]
+    [ValidateImage(Required = false)]
     public async Task<IActionResult> Register(RegisterRequest request)
     {
         var user = new User { UserName = request.Username, Email = request.Email };
         var result = await userManager.CreateAsync(user, request.Password);
-        return result.Succeeded ? Created() : BadRequest(result.Errors.Select(e => e.Description));
+        if (!result.Succeeded)
+            result.ToErrorOr();
+        
+        if (request.Picture is { Length: > 0 })
+        {
+            var pfpResult = await cloudinaryService.AddPhotoAsync(request.Picture);
+            user.ProfilePictureUrl = pfpResult.Value;
+            await userManager.UpdateAsync(user);
+        }
+
+        return Created();
     }
 
     [AllowAnonymous]

@@ -1,11 +1,12 @@
 using Application.Dto;
 using Application.Interfaces;
 using ErrorOr;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 
 namespace Infrastructure.Identity.Services;
 
-public class UserService(UserManager<User> userManager) : IUserService
+public class UserService(UserManager<User> userManager, ICloudinaryService cloudinaryService) : IUserService
 {
     public async Task<ErrorOr<UserDto>> GetUserByIdAsync(Guid userId)
     {
@@ -36,8 +37,28 @@ public class UserService(UserManager<User> userManager) : IUserService
             CreatedAtUtc = user.CreatedAtUtc,
         };
     }
-    
+
     //settings
+    public async Task<ErrorOr<Updated>> UpdatePfpAsync(Guid userId, IFormFile picture, string password)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString());
+        if (user is null)
+            return Error.NotFound("User.NotFound","User not found");
+
+        if(!await userManager.CheckPasswordAsync(user, picture.FileName))
+            return  Error.Unauthorized("User.ChangePfp", "Invalid password");
+        
+        var result = await cloudinaryService.AddPhotoAsync(picture);
+        if (result.IsError)
+            return result.Errors;
+        
+        var updateResult = await userManager.UpdateAsync(user);
+        if(!updateResult.Succeeded)
+            return Error.Validation("User.UpdatePfp", result.Errors.First().Description);
+        
+        return Result.Updated;
+    }
+
     public async Task<ErrorOr<Updated>> ChangeUsername(Guid userId, string newUsername, string password)
     {
         var user = await userManager.FindByIdAsync(userId.ToString());

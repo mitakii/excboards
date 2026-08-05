@@ -56,6 +56,8 @@ public static class InfrastructureServiceCollectionExtensions
         
         builder.Services.AddScoped<IUserService, UserService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
+        
+        builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 
         return builder;
     }
