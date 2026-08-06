@@ -20,21 +20,23 @@ public class AuthController(
     IAuthService authService,
     ITokenService tokenService,
     IOptions<JwtOptions> jwtOptions,
-    ICloudinaryService cloudinaryService,
-    IUserService userService) : ControllerBase
+    ICloudinaryService cloudinaryService) : ControllerBase
 {
     private readonly JwtOptions _jwtOptions = jwtOptions.Value;
 
     [AllowAnonymous]
     [HttpPost("register")]
     [ValidateImage(Required = false)]
-    public async Task<IActionResult> Register(RegisterRequest request)
+    public async Task<IActionResult> Register([FromForm] RegisterRequest request)
     {
         var user = new User { UserName = request.Username, Email = request.Email };
         var result = await userManager.CreateAsync(user, request.Password);
         if (!result.Succeeded)
-            result.ToErrorOr();
-        
+        {
+            ErrorOr<Success> errorResult = result.Errors.Select(e => Error.Validation(e.Code, e.Description)).ToList();
+            return errorResult.ToProblem(this);
+        }
+
         if (request.Picture is { Length: > 0 })
         {
             var pfpResult = await cloudinaryService.AddPhotoAsync(request.Picture);

@@ -5,5 +5,5 @@ namespace Infrastructure.Identity;
 public class User : IdentityUser<Guid>
 {
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
-    public string ProfilePictureUrl { get; set; }
+    public string ProfilePictureUrl { get; set; } = string.Empty;
 }

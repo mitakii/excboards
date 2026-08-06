@@ -33,11 +33,11 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
         return context.SaveChangesAsync();
     }
 
-    public Task<UserBoard?> GetByIdAsync(Guid userId, Guid id)
+    public Task<UserBoard?> GetByIdAsync(Guid id)
     {
         return context.UserBoards
             .Include(ub => ub.Tags)
-            .FirstOrDefaultAsync(ub => ub.Id == id && ub.UserId == userId);
+            .FirstOrDefaultAsync(ub => ub.Id == id);
     }
 
     public Task<List<UserBoard>> GetAllByUserIdAsync(Guid userId)
@@ -61,7 +61,7 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
     {
         return context.UserBoards
             .AsNoTracking()
-            .AnyAsync(ub => ub.UserId == userId && ub.Name.ToLower() == name.ToLower());
+            .AnyAsync(ub => ub.UserId == userId && ub.NormalizedName == name.ToLower());
     }
 
     public Task<List<UserBoard>> GetByTagsAsync(IEnumerable<Tag> tags)

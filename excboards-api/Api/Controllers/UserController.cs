@@ -26,11 +26,8 @@ public class UserController(IUserService userService) : ControllerBase
     [HttpGet("settings/changePassword")]
     public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
     {
-        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.Sid), out var userId))
-            return Unauthorized();
-
         var result = await userService
-            .ChangePassword(userId, request.OldPassword, request.NewPassword);
+            .ChangePassword(User.GetUserId(), request.OldPassword, request.NewPassword);
         
         if(result.IsError)
             result.ToProblem(this);
@@ -41,11 +38,8 @@ public class UserController(IUserService userService) : ControllerBase
     [HttpGet("settings/changeUsername")]
     public async Task<IActionResult> ChangeUsername(ChangeUsernameRequest request)
     {
-        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.Sid), out var userId))
-            return Unauthorized();
-
         var result = await userService
-            .ChangeUsername(userId, request.NewUsername, request.Password);
+            .ChangeUsername(User.GetUserId(), request.NewUsername, request.Password);
         
         if(result.IsError)
             result.ToProblem(this);
@@ -56,11 +50,8 @@ public class UserController(IUserService userService) : ControllerBase
     [HttpGet("settings/changeEmail")]
     public async Task<IActionResult> ChangeUsername(ChangeEmailRequest request)
     {
-        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.Sid), out var userId))
-            return Unauthorized();
-
         var result = await userService
-            .ChangeEmail(userId, request.NewEmail, request.Password);
+            .ChangeEmail(User.GetUserId(), request.NewEmail, request.Password);
         
         if(result.IsError)
             result.ToProblem(this);
@@ -72,10 +63,7 @@ public class UserController(IUserService userService) : ControllerBase
     [HttpGet("settings/changePfp")]
     public async Task<IActionResult> ChangePfp(ChangePfpRequest request)
     {
-        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.Sid), out var userId))
-            return Unauthorized();
-
-        var result = await userService.UpdatePfpAsync(userId, request.Picture, request.Password);
+        var result = await userService.UpdatePfpAsync(User.GetUserId(), request.Picture, request.Password);
         
         if(result.IsError)
             result.ToProblem(this);

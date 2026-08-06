@@ -1,3 +1,4 @@
+using System.Net;
 using Application.Dto;
 using Application.Interfaces;
 using Application.Storage;
@@ -8,7 +9,7 @@ using ErrorOr;
 
 namespace Application.Boards;
 
-public class BoardService(IBoardRepository boardRepository, IFileRepository fileRepository)
+public class BoardService(IBoardRepository boardRepository, IFileRepository fileRepository, IPermissionService permissionService)
 {
     public async Task<ErrorOr<Guid>> CreateAsync(Guid userId, string name, string description, Stream stream)
     {
@@ -44,8 +45,11 @@ public class BoardService(IBoardRepository boardRepository, IFileRepository file
 
     public async Task<ErrorOr<UserBoard>> GetByIdAsync(Guid userId, Guid boardId)
     {
-        var board = await boardRepository.GetByIdAsync(userId, boardId);
+        var board = await boardRepository.GetByIdAsync(boardId);
         if (board == null)
+            return Error.NotFound("Board.NotFound", "Board not found");
+
+        if (!await permissionService.CanViewAsync(userId, boardId))
             return Error.NotFound("Board.NotFound", "Board not found");
 
         return board;
@@ -53,8 +57,11 @@ public class BoardService(IBoardRepository boardRepository, IFileRepository file
 
     public async Task<ErrorOr<Stream>> GetSceneAsync(Guid userId, Guid boardId)
     {
-        var board = await boardRepository.GetByIdAsync(userId, boardId);
+        var board = await boardRepository.GetByIdAsync(boardId);
         if (board == null)
+            return Error.NotFound("Board.NotFound", "Board not found");
+
+        if (!await permissionService.CanViewAsync(userId, boardId))
             return Error.NotFound("Board.NotFound", "Board not found");
 
         return await fileRepository.GetFileAsync(BoardFileKeys.Scene(boardId));
@@ -62,10 +69,16 @@ public class BoardService(IBoardRepository boardRepository, IFileRepository file
 
     public async Task<ErrorOr<Deleted>> RemoveAsync(Guid userId, Guid boardId)
     {
-        var board = await boardRepository.GetByIdAsync(userId, boardId);
+        var board = await boardRepository.GetByIdAsync(boardId);
         if (board == null)
             return Error.NotFound("Board.NotFound", "Board not found");
-        
+
+        if (!await permissionService.CanViewAsync(userId, boardId))
+            return Error.NotFound("Board.NotFound", "Board not found");
+
+        if (!await permissionService.IsOwnerAsync(userId, boardId))
+            return Error.Forbidden("Board.Forbidden", "Only the board owner can delete this board.");
+
         await boardRepository.RemoveAsync(board);
 
         return Result.Deleted;
@@ -73,36 +86,83 @@ public class BoardService(IBoardRepository boardRepository, IFileRepository file
 
     public async Task<ErrorOr<Updated>> AddTagsAsync(Guid userId, Guid boardId, List<Tag> tags)
     {
-        var board = await boardRepository.GetByIdAsync(userId, boardId);
-        
+        var board = await boardRepository.GetByIdAsync(boardId);
+
         if(board == null)
             return Error.NotFound("Board.NotFound", "Board not found");
-        
+
+        if (!await permissionService.CanViewAsync(userId, boardId))
+            return Error.NotFound("Board.NotFound", "Board not found");
+
+        if (!await permissionService.CanEditAsync(userId, boardId))
+            return Error.Forbidden("Board.Forbidden", "You do not have permission to edit this board.");
+
         board.Tags = tags;
         board.Updated = DateTime.UtcNow;
-        
+
         await boardRepository.UpdateAsync(board);
         return Result.Updated;
     }
 
     public async Task<ErrorOr<Updated>> RemoveTagsAsync(Guid userId, Guid boardId, List<Tag> tagsToRemove)
     {
-        var board = await boardRepository.GetByIdAsync(userId, boardId);
-        
+        var board = await boardRepository.GetByIdAsync(boardId);
+
         if(board == null)
             return Error.NotFound("Board.NotFound", "Board not found");
 
+        if (!await permissionService.CanViewAsync(userId, boardId))
+            return Error.NotFound("Board.NotFound", "Board not found");
+
+        if (!await permissionService.CanEditAsync(userId, boardId))
+            return Error.Forbidden("Board.Forbidden", "You do not have permission to edit this board.");
+
         board.Tags = board.Tags.Except(tagsToRemove).ToList();
         board.Updated = DateTime.UtcNow;
-        
+
         await boardRepository.UpdateAsync(board);
         return Result.Updated;
     }
-    
-    
-    public async Task<ErrorOr<List<UserBoard>>> GetUserBoardResults(Guid userId, int pageNumber, int pageSize)
+
+    public async Task<ErrorOr<List<UserBoard>>> GetUserBoards(Guid userId, int pageNumber, int pageSize)
     {
         return await boardRepository
             .GetAllByUserIdPagedAsync(userId, pageNumber, pageSize);
+    }
+
+    public async Task<ErrorOr<Dictionary<Guid, string>>> GetDownloadPresignedUrls(Guid userId, Guid boardId, List<Guid> sceneFileIds)
+    {
+        if(!await permissionService.CanViewAsync(userId, boardId))
+            return Error.NotFound("Board.NotFound", "Board not found");
+
+        var result = await Task.WhenAll(sceneFileIds.Select(async fId => (
+                FileId: fId,
+                FileUrl: await fileRepository.GetDownloadUrlAsync(
+                        BoardFileKeys.File(boardId, fId), TimeSpan.FromMinutes(10)))
+        ));
+
+        return result.ToDictionary(k => k.FileId, v => v.FileUrl);
+    }
+    
+    public async Task<ErrorOr<string>> GetDownloadPresignedUrl(Guid userId, Guid boardId, Guid fileId)
+    {
+        if (!await permissionService.CanViewAsync(userId, boardId))
+            return Error.NotFound("Board.NotFound", "Board not found");
+
+        var result = await fileRepository
+            .GetDownloadUrlAsync(BoardFileKeys.File(boardId, fileId), TimeSpan.FromMinutes(10));
+        return result;
+    }
+
+    public async Task<ErrorOr<string>> GetUploadPresignedUrl(Guid userId, Guid boardId, Guid fileId)
+    {
+        if (!await permissionService.CanViewAsync(userId, boardId))
+            return Error.NotFound("Board.NotFound", "Board not found");
+        if (!await permissionService.CanEditAsync(userId, boardId))
+            return Error.Forbidden("Board.Forbidden", "User cant edit board");
+
+        var result = await fileRepository
+            .GetUploadUrlAsync(BoardFileKeys.File(boardId, fileId), TimeSpan.FromMinutes(10));
+        return result;
     }
 }

@@ -2,6 +2,7 @@ using Application.Auth;
 using Application.Boards;
 using Application.Interfaces;
 using Application.Storage;
+using BusinessLayer.DTO;
 using Domain.Interfaces;
 using Infrastructure.Identity;
 using Infrastructure.Identity.Services;
@@ -43,11 +44,14 @@ public static class InfrastructureServiceCollectionExtensions
             .AddDefaultTokenProviders();
 
         builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("JwtOptions"));
+        builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
         builder.Services.AddScoped<ITokenService, TokenService>();
         builder.Services.AddScoped<IPermissionService, PermissionService>();
         builder.Services.AddScoped<IBoardRepository, BoardRepository>();
         builder.Services.AddScoped<ITagRepository, TagRepository>();
         builder.Services.AddScoped<BoardService>();
+        builder.Services.AddScoped<IBoardCollaboratorRepository, BoardCollaboratorRepository>();
+        builder.Services.AddScoped<BoardCollaboratorService>();
         
         builder.Services.AddHostedService<RefreshTokenCleanupService>();
         

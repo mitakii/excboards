@@ -8,10 +8,11 @@ using Minio;
 
 namespace Infrastructure.Storage;
 
-public class MinioStorage 
+public class MinioStorage
 {
     private readonly AmazonS3Client _client;
     private readonly string _bucketName;
+    private readonly string _scheme;
 
     public MinioStorage(IOptions<MinioOptions> options)
     {
@@ -25,7 +26,15 @@ public class MinioStorage
         var credentials = new BasicAWSCredentials(settings.AccessKey, settings.SecretKey);
         _client = new AmazonS3Client(credentials, config);
         _bucketName = settings.BucketName;
+        _scheme = new Uri(settings.ServiceURL).Scheme;
     }
+
+    // The SDK's presign signer always emits "https" regardless of ServiceURL's scheme or
+    // AmazonS3Config.UseHttp (verified against AWSSDK.S3 4.0.101.6 — neither affects it).
+    // Rewriting the scheme afterwards is safe: SigV4 signs the Host header, not the URL scheme,
+    // so the signature stays valid.
+    private string WithConfiguredScheme(string presignedUrl) =>
+        new UriBuilder(presignedUrl) { Scheme = _scheme }.Uri.ToString();
 
     private async Task EnsureBucketExistsAsync()
     {
@@ -75,23 +84,25 @@ public class MinioStorage
     {
         await EnsureBucketExistsAsync();
 
-        return await _client.GetPreSignedURLAsync(new GetPreSignedUrlRequest
+        var url = await _client.GetPreSignedURLAsync(new GetPreSignedUrlRequest
         {
             BucketName = _bucketName,
             Key = key,
             Verb = HttpVerb.PUT,
             Expires = DateTime.UtcNow.Add(expiry)
         });
+        return WithConfiguredScheme(url);
     }
 
     public async Task<string> GetPresignedDownloadUrlAsync(string key, TimeSpan expiry)
     {
-        return await _client.GetPreSignedURLAsync(new GetPreSignedUrlRequest
+        var url = await _client.GetPreSignedURLAsync(new GetPreSignedUrlRequest
         {
             BucketName = _bucketName,
             Key = key,
             Verb = HttpVerb.GET,
             Expires = DateTime.UtcNow.Add(expiry)
         });
+        return WithConfiguredScheme(url);
     }
 }

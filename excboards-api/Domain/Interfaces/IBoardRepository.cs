@@ -8,7 +8,7 @@ public interface IBoardRepository
     Task RemoveAsync(UserBoard board);
     Task UpdateAsync(UserBoard board);
     
-    Task<UserBoard?> GetByIdAsync(Guid userId, Guid id);
+    Task<UserBoard?> GetByIdAsync(Guid id);
     Task<List<UserBoard>> GetAllByUserIdAsync(Guid userId);
     Task<List<UserBoard>> GetAllByUserIdPagedAsync(Guid userId, int pageNumber, int pageSize);
     
