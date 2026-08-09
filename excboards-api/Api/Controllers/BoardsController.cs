@@ -35,6 +35,18 @@ public class BoardsController
         return Ok();
     }
 
+    [HttpGet("u/{userId:guid}")]
+    public async Task<IActionResult> GetUserBoards(Guid userId, [FromQuery] PagedRequest request)
+    {
+        var result = await boardService
+            .GetUserBoards(userId, User.GetUserId(), request.Page, request.PageSize);
+        if (result.IsError)
+            return result.ToProblem(this);
+
+        return Ok(result.Value.Select(board => new BoardResponse
+            (board.Id, board.Name, board.Description, board.IsPublished, board.Created, board.Updated)));
+    }
+    
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
@@ -55,6 +67,18 @@ public class BoardsController
             return result.ToProblem(this);
 
         return File(result.Value, "application/json");
+    }
+
+    [HttpPut("{id:guid}/scene")]
+    public async Task<IActionResult> SaveScene(Guid id, [FromForm] SaveSceneRequest request)
+    {
+        await using var stream = request.Scene.OpenReadStream();
+
+        var result = await boardService.SaveSceneAsync(User.GetUserId(), id, stream);
+        if (result.IsError)
+            return result.ToProblem(this);
+
+        return Ok();
     }
 
     [HttpPost("{boardId:guid}/downloadUrls")]

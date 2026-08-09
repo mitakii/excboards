@@ -17,56 +17,66 @@ public class UserController(IUserService userService) : ControllerBase
     {
         var result = await userService.GetUserByIdAsync(userId);
         if (result.IsError)
-            result.ToProblem(this);
-        
-        return Ok(result);
+            return result.ToProblem(this);
+
+        return Ok(result.Value);
+    }
+
+    [HttpGet("username/{username}")]
+    public async Task<IActionResult> GetByUsername(string username)
+    {
+        var result = await userService.GetUserByNameAsync(username);
+        if (result.IsError)
+            return result.ToProblem(this);
+
+        return Ok(result.Value);
     }
 
     [Authorize]
-    [HttpGet("settings/changePassword")]
+    [HttpPost("settings/changePassword")]
     public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
     {
         var result = await userService
             .ChangePassword(User.GetUserId(), request.OldPassword, request.NewPassword);
-        
+
         if(result.IsError)
-            result.ToProblem(this);
+            return result.ToProblem(this);
         return Ok();
     }
-    
+
     [Authorize]
-    [HttpGet("settings/changeUsername")]
+    [HttpPost("settings/changeUsername")]
     public async Task<IActionResult> ChangeUsername(ChangeUsernameRequest request)
     {
         var result = await userService
             .ChangeUsername(User.GetUserId(), request.NewUsername, request.Password);
-        
+
         if(result.IsError)
-            result.ToProblem(this);
+            return result.ToProblem(this);
         return Ok();
     }
-    
+
     [Authorize]
-    [HttpGet("settings/changeEmail")]
-    public async Task<IActionResult> ChangeUsername(ChangeEmailRequest request)
+    [HttpPost("settings/changeEmail")]
+    public async Task<IActionResult> ChangeEmail(ChangeEmailRequest request)
     {
         var result = await userService
             .ChangeEmail(User.GetUserId(), request.NewEmail, request.Password);
-        
+
         if(result.IsError)
-            result.ToProblem(this);
+            return result.ToProblem(this);
         return Ok();
     }
-    
+
     [Authorize]
     [ValidateImage(Required = false)]
-    [HttpGet("settings/changePfp")]
-    public async Task<IActionResult> ChangePfp(ChangePfpRequest request)
+    [HttpPost("settings/changePfp")]
+    public async Task<IActionResult> ChangePfp([FromForm] ChangePfpRequest request)
     {
         var result = await userService.UpdatePfpAsync(User.GetUserId(), request.Picture, request.Password);
-        
+
         if(result.IsError)
-            result.ToProblem(this);
+            return result.ToProblem(this);
         return Ok();
     }
 }

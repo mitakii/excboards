@@ -6,4 +6,5 @@ public class UserDto
     public string Username { get; set; }
     public string Email { get; set; }
     public DateTime CreatedAtUtc { get; set; }
+    public string ProfilePictureUrl { get; set; }
 }

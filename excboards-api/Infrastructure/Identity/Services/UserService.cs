@@ -20,6 +20,7 @@ public class UserService(UserManager<User> userManager, ICloudinaryService cloud
             Email = user.Email,
             Username = user.UserName,
             CreatedAtUtc = user.CreatedAtUtc,
+            ProfilePictureUrl = user.ProfilePictureUrl,
         };
     }
 
@@ -35,6 +36,7 @@ public class UserService(UserManager<User> userManager, ICloudinaryService cloud
             Email = user.Email,
             Username = user.UserName,
             CreatedAtUtc = user.CreatedAtUtc,
+            ProfilePictureUrl = user.ProfilePictureUrl,
         };
     }
 
@@ -45,13 +47,14 @@ public class UserService(UserManager<User> userManager, ICloudinaryService cloud
         if (user is null)
             return Error.NotFound("User.NotFound","User not found");
 
-        if(!await userManager.CheckPasswordAsync(user, picture.FileName))
+        if(!await userManager.CheckPasswordAsync(user, password))
             return  Error.Unauthorized("User.ChangePfp", "Invalid password");
-        
+
         var result = await cloudinaryService.AddPhotoAsync(picture);
         if (result.IsError)
             return result.Errors;
-        
+
+        user.ProfilePictureUrl = result.Value;
         var updateResult = await userManager.UpdateAsync(user);
         if(!updateResult.Succeeded)
             return Error.Validation("User.UpdatePfp", result.Errors.First().Description);

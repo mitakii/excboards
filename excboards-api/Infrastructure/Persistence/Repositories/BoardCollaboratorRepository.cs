@@ -12,6 +12,13 @@ public class BoardCollaboratorRepository(AppDbContext context) : IBoardCollabora
             .FirstOrDefaultAsync(c => c.BoardId == boardId && c.UserId == userId);
     }
 
+    public Task<List<BoardCollaborator>> GetAllAsync(List<Guid> boardIds, Guid userId)
+    {
+        return context.BoardCollaborators
+            .Where(c => boardIds.Contains(c.BoardId) && c.UserId == userId)
+            .ToListAsync();
+    }
+
     public Task AddAsync(BoardCollaborator collaborator)
     {
         context.BoardCollaborators.Add(collaborator);

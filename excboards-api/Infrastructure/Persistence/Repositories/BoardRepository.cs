@@ -51,6 +51,7 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
     public Task<List<UserBoard>> GetAllByUserIdPagedAsync(Guid userId, int pageNumber, int pageSize)
     {
         return context.UserBoards
+            .AsNoTracking()
             .Where(ub => ub.UserId == userId)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
