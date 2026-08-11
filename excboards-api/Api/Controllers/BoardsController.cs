@@ -59,6 +59,20 @@ public class BoardsController
             (board.Id, board.Name, board.Description, board.IsPublished, board.Created, board.Updated));
     }
 
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([AsParameters] SearchRequest request)
+    {
+        var result = await boardService.SearchAsync(request.Query, request.Page, request.PageSize);
+        if(result.IsError)
+            return  result.ToProblem(this);
+        
+        return Ok(new SearchResponse<BoardResponse>(result.Value.Data.Select(board =>  
+                new BoardResponse
+                    (board.Id, board.Name, board.Description, board.IsPublished, board.Created, board.Updated))
+                .ToList(),
+            result.Value.Total, result.Value.Page, result.Value.PageSize));
+    }
+
     [HttpGet("{id:guid}/scene")]
     public async Task<IActionResult> GetScene(Guid id)
     {

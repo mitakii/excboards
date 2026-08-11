@@ -46,6 +46,22 @@ public class BoardService(IBoardRepository boardRepository,
         return board.Id;
     }
 
+    public async Task<ErrorOr<PagedResult<UserBoard>>> SearchAsync(string query, int page = 1, int pageSize = 10)
+    {
+        if(string.IsNullOrWhiteSpace(query))
+            return Error.Validation("Board.SearchQuery", "Search query is required.");
+        
+        var boards = await boardRepository.SearchAsync(query, page, pageSize);
+
+        return new PagedResult<UserBoard>()
+        {
+            Data = boards,
+            Page = page,
+            PageSize = pageSize,
+            Total = boards.Count
+        };
+    }
+
     public async Task<ErrorOr<UserBoard>> GetByIdAsync(Guid userId, Guid boardId)
     {
         var board = await boardRepository.GetByIdAsync(boardId);

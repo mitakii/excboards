@@ -1,12 +1,14 @@
 using Application.Dto;
 using Application.Interfaces;
 using ErrorOr;
+using Infrastructure.Identity.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Identity.Services;
 
-public class UserService(UserManager<User> userManager, ICloudinaryService cloudinaryService) : IUserService
+public class UserService(IUserRepository userRepository, UserManager<User> userManager, ICloudinaryService cloudinaryService) : IUserService
 {
     public async Task<ErrorOr<UserDto>> GetUserByIdAsync(Guid userId)
     {
@@ -37,6 +39,26 @@ public class UserService(UserManager<User> userManager, ICloudinaryService cloud
             Username = user.UserName,
             CreatedAtUtc = user.CreatedAtUtc,
             ProfilePictureUrl = user.ProfilePictureUrl,
+        };
+    }
+
+    public async Task<ErrorOr<PagedResult<UserDto>>> SearchAsync(string query, int page, int pageSize)
+    {
+        var users = await userRepository.SearchUsersAsync(query, page, pageSize);
+
+        return new PagedResult<UserDto>()
+        {
+            Total = users.Count,
+            Page = page,
+            PageSize = pageSize,
+            Data = users.Select(user => new UserDto
+            {
+                Id = user.Id,
+                Email = user.Email,
+                Username = user.UserName,
+                CreatedAtUtc = user.CreatedAtUtc,
+                ProfilePictureUrl = user.ProfilePictureUrl,
+            }).ToList()
         };
     }
 

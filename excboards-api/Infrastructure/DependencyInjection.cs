@@ -5,6 +5,8 @@ using Application.Storage;
 using BusinessLayer.DTO;
 using Domain.Interfaces;
 using Infrastructure.Identity;
+using Infrastructure.Identity.Interfaces;
+using Infrastructure.Identity.Repositories;
 using Infrastructure.Identity.Services;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Repositories;
@@ -62,6 +64,8 @@ public static class InfrastructureServiceCollectionExtensions
         builder.Services.AddScoped<IAuthService, AuthService>();
         
         builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
+
+        builder.Services.AddScoped<IUserRepository, UserRepository>();
 
         return builder;
     }

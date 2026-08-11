@@ -58,6 +58,17 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
             .ToListAsync();
     }
 
+    public Task<List<UserBoard>> SearchAsync(string query, int page = 1, int pageSize = 10)
+    {
+        return context.UserBoards.AsNoTracking()
+            .Where(b => 
+                EF.Functions.ILike(b.Name, $"%{query}%") ||
+                EF.Functions.ILike(b.Description, $"%{query}%"))
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+    }
+
     public Task<bool> ExistsByNameAsync(Guid userId, string name)
     {
         return context.UserBoards

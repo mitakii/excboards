@@ -1,6 +1,8 @@
 using System.Security.Claims;
+using Application.Dto;
 using Application.Interfaces;
 using excboards_api.Attributes;
+using excboards_api.Contracts.Boards;
 using excboards_api.Contracts.User;
 using excboards_api.Extensions;
 using Microsoft.AspNetCore.Authorization;
@@ -32,15 +34,30 @@ public class UserController(IUserService userService) : ControllerBase
         return Ok(result.Value);
     }
 
+    [HttpGet("search")]
+    public async Task<IActionResult> SearchUser([AsParameters] SearchRequest request)
+    {
+        var result = await userService.SearchAsync(request.Query, request.Page, request.PageSize);
+        if(result.IsError)
+            return result.ToProblem(this);
+        
+        return Ok(new SearchResponse<UserDto>(
+            result.Value.Data.ToList(),
+            result.Value.Data.Count,
+            result.Value.Page,
+            result.Value.PageSize
+        ));
+    }
+
     [Authorize]
     [HttpPost("settings/changePassword")]
     public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
     {
         var result = await userService
             .ChangePassword(User.GetUserId(), request.OldPassword, request.NewPassword);
-
         if(result.IsError)
             return result.ToProblem(this);
+        
         return Ok();
     }
 
