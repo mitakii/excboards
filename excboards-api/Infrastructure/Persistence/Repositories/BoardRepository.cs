@@ -48,22 +48,30 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
             .ToListAsync();
     }
 
-    public Task<List<UserBoard>> GetAllByUserIdPagedAsync(Guid userId, int pageNumber, int pageSize)
+    public Task<List<UserBoard>> GetAllByUserIdPagedAsync(Guid requestedUserId, Guid currentUserId, int pageNumber, int pageSize)
     {
         return context.UserBoards
             .AsNoTracking()
-            .Where(ub => ub.UserId == userId)
+            .Where(ub => ub.UserId == requestedUserId && 
+                         (ub.IsPublished || 
+                          currentUserId == ub.UserId || 
+                          ub.Collaborators.Any(c => c.UserId == currentUserId)))
+            .OrderBy(ub => ub.Created)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
     }
 
-    public Task<List<UserBoard>> SearchAsync(string query, int page = 1, int pageSize = 10)
+    public Task<List<UserBoard>> SearchAsync(Guid currentUserId, string query, int page = 1, int pageSize = 10)
     {
         return context.UserBoards.AsNoTracking()
-            .Where(b => 
-                EF.Functions.ILike(b.Name, $"%{query}%") ||
-                EF.Functions.ILike(b.Description, $"%{query}%"))
+            .Where(ub => (
+                EF.Functions.ILike(ub.Name, $"%{query}%") ||
+                EF.Functions.ILike(ub.Description, $"%{query}%")) && 
+                         (ub.IsPublished || 
+                          currentUserId == ub.UserId || 
+                          ub.Collaborators.Any(c => c.UserId == currentUserId)))
+            .OrderBy(ub => ub.Created)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();

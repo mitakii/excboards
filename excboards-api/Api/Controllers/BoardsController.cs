@@ -62,7 +62,7 @@ public class BoardsController
     [HttpGet("search")]
     public async Task<IActionResult> Search([AsParameters] SearchRequest request)
     {
-        var result = await boardService.SearchAsync(request.Query, request.Page, request.PageSize);
+        var result = await boardService.SearchAsync(User.GetUserId(), request.Query, request.Page, request.PageSize);
         if(result.IsError)
             return  result.ToProblem(this);
         
@@ -141,12 +141,12 @@ public class BoardsController
         return Ok();
     }
 
-    [HttpPut("{id:guid}/collaborators/{userId:guid}")]
+    [HttpPut("{boardId:guid}/collaborators/{userId:guid}")]
     public async Task<IActionResult> UpdateCollaborator
-        (Guid id, Guid userId, [FromBody] UpdateCollaboratorRequest request)
+        (Guid boardId, Guid userId, [FromBody] UpdateCollaboratorRequest request)
     {
         var result = await boardCollaboratorService
-            .UpdateAsync(User.GetUserId(), id, userId, request.Permission);
+            .UpdateAsync(User.GetUserId(), boardId, userId, request.Permission);
         if (result.IsError)
             return result.ToProblem(this);
 

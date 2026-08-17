@@ -10,10 +10,14 @@ public class PermissionService(AppDbContext context) : IPermissionService
     private readonly record struct AccessResult(bool IsOwner, PermissionLevel? CollaboratorPermission);
 
     public async Task<bool> CanViewAsync(Guid userId, Guid boardId)
-        => await GetAccessAsync(userId, boardId) is not null;
+    {
+        if(await BoardIsPublicAsync(boardId))
+            return true;
+        return await GetAccessAsync(userId, boardId) is not null;
+    }
 
     public async Task<Dictionary<Guid, bool>?> CanViewAsync(Guid userId, List<Guid> boardIds) =>
-        await GetAccessAsync(userId, boardIds);
+        await GetViewAccessAsync(userId, boardIds);
 
     public async Task<bool> CanEditAsync(Guid userId, Guid boardId)
     {
@@ -24,6 +28,12 @@ public class PermissionService(AppDbContext context) : IPermissionService
     public Task<bool> IsOwnerAsync(Guid userId, Guid boardId)
         => context.UserBoards.AsNoTracking().AnyAsync(b => b.Id == boardId && b.UserId == userId);
 
+    private async Task<bool> BoardIsPublicAsync(Guid boardId)
+    {
+        var result = await context.UserBoards.AsNoTracking().Where(b => b.Id == boardId).FirstOrDefaultAsync();
+        return result is not null && result.IsPublished;
+    }
+    
     private async Task<AccessResult?> GetAccessAsync(Guid userId, Guid boardId)
     {
         var result = await context.UserBoards
@@ -43,18 +53,16 @@ public class PermissionService(AppDbContext context) : IPermissionService
         return result;
     }
     
-    private async Task<Dictionary<Guid, bool>?> GetAccessAsync(Guid userId, List<Guid> boardIds)
+    private async Task<Dictionary<Guid, bool>?> GetViewAccessAsync(Guid userId, List<Guid> boardIds)
     {
         var result = await context.UserBoards
             .AsNoTracking()
             .Where(b => boardIds.Contains(b.Id))
             .Select(b => new {
                 b.Id,
-                Permission = b.Collaborators
-                    .Where(c => c.UserId == userId)
-                    .Select(c => (PermissionLevel?)c.Permission)
-                    .FirstOrDefault()})
-            .ToDictionaryAsync(b => b.Id, b => b.Permission is not null);
+                Permission = b.IsPublished || b.Collaborators
+                    .Any(c => c.UserId == userId)})
+            .ToDictionaryAsync(b => b.Id, b => b.Permission);
 
         return result;
     }
