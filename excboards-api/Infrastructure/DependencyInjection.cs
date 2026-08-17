@@ -2,6 +2,7 @@ using Application.Auth;
 using Application.Boards;
 using Application.Interfaces;
 using Application.Storage;
+using Application.Tags;
 using BusinessLayer.DTO;
 using Domain.Interfaces;
 using Infrastructure.Identity;
@@ -51,6 +52,7 @@ public static class InfrastructureServiceCollectionExtensions
         builder.Services.AddScoped<IPermissionService, PermissionService>();
         builder.Services.AddScoped<IBoardRepository, BoardRepository>();
         builder.Services.AddScoped<ITagRepository, TagRepository>();
+        builder.Services.AddScoped<TagService>();
         builder.Services.AddScoped<BoardService>();
         builder.Services.AddScoped<IBoardCollaboratorRepository, BoardCollaboratorRepository>();
         builder.Services.AddScoped<BoardCollaboratorService>();

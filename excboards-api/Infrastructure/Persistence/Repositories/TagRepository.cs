@@ -32,6 +32,17 @@ public class TagRepository(AppDbContext context) : ITagRepository
             .ToListAsync();
     }
 
+    public Task<List<Tag>> SearchTags(string query, int pageNumber, int pageSize)
+    {
+        return context.Tags
+            .AsNoTracking()
+            .Where(t => EF.Functions.ILike(t.Name, $"%{query}%"))           
+            .OrderBy(t => t.Name)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+    }
+
     public async Task<List<Tag>> CreateTagsAsync(List<string> tags)
     {
         if (tags.Count == 0)

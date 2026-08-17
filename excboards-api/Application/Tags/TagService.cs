@@ -1,14 +1,16 @@
 using Domain.Entities;
 using Domain.Interfaces;
+using ErrorOr;
 
 namespace Application.Tags;
 
 public class TagService(ITagRepository tagRepository)
 {
-    public async Task<Tag> CreateAsync(string tagName)
+    public async Task<ErrorOr<List<Tag>>> Search(string query, int page, int pageSize)
     {
-        var newTag = new Tag(tagName);
-        await tagRepository.CreateTagAsync(newTag);
-        return newTag;
+        var result = await tagRepository.SearchTags(query, page, pageSize);
+        if(result.Count == 0)
+            return Error.NotFound("Tags.Search", "No tags found");
+        return result;
     }
 }
