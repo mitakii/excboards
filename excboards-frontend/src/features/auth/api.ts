@@ -15,9 +15,11 @@ export async function login(username: string, password: string) {
   await api.post("/api/auth/login", { username, password });
 }
 
-export async function register(username: string, email: string, password: string) {
-  // AuthController.Register binds [FromForm] (it also accepts an optional profile
-  // picture file), so this must be multipart/form-data, not a JSON body.
+export async function register(
+  username: string,
+  email: string,
+  password: string
+) {
   const form = new FormData();
   form.append("Username", username);
   form.append("Email", email);

@@ -5,7 +5,7 @@ import { createCanvasHubConnection } from "@/lib/signalr";
 
 export function useCanvasHub(
   boardId: string | undefined,
-  onElementsUpdated: (elements: OrderedExcalidrawElement[]) => void,
+  onElementsUpdated: (elements: OrderedExcalidrawElement[]) => void
 ) {
   const connectionRef = useRef<HubConnection | null>(null);
   const onElementsUpdatedRef = useRef(onElementsUpdated);
@@ -21,30 +21,44 @@ export function useCanvasHub(
       onElementsUpdatedRef.current(elements);
     });
 
-    connection
+    let cancelled = false;
+    const startPromise = connection
       .start()
-      .then(() => connection.invoke("JoinRoom", boardId))
-      .catch((err) => console.error("Failed to join board room", err));
+      .then(() => {
+        if (cancelled) return;
+        return connection.invoke("JoinRoom", boardId);
+      })
+      .catch((err) => {
+        if (!cancelled) console.error("Failed to join board room", err);
+      });
 
     return () => {
+      cancelled = true;
       connectionRef.current = null;
-      connection
-        .invoke("LeaveRoom", boardId)
-        .catch(() => undefined)
-        .finally(() => connection.stop());
+      startPromise.finally(() => {
+        connection
+          .invoke("LeaveRoom", boardId)
+          .catch(() => undefined)
+          .finally(() => connection.stop());
+      });
     };
   }, [boardId]);
 
   const broadcastElements = useCallback(
     (elements: OrderedExcalidrawElement[]) => {
       const connection = connectionRef.current;
-      if (!boardId || !connection || connection.state !== HubConnectionState.Connected) return;
+      if (
+        !boardId ||
+        !connection ||
+        connection.state !== HubConnectionState.Connected
+      )
+        return;
 
       connection.invoke("BroadcastElements", boardId, elements).catch((err) => {
         console.error("Failed to broadcast elements", err);
       });
     },
-    [boardId],
+    [boardId]
   );
 
   return { broadcastElements };

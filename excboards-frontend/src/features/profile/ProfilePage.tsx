@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { PagePagination } from "@/components/PagePagination";
 import { Spinner } from "@/components/ui/spinner";
 import { getErrorMessage } from "@/lib/api";
+import { addRecentUser } from "@/lib/recentUsers";
 import { BoardList } from "@/features/boards/components/BoardList";
 import type { BoardCardData } from "@/features/boards/components/BoardCard";
 import { useUserBoards, useDeleteBoard } from "@/features/boards/queries";
@@ -19,6 +20,12 @@ export function ProfilePage() {
   const profile = useUserProfile(username);
   const boards = useUserBoards(profile.data?.id, page, PAGE_SIZE);
   const deleteBoard = useDeleteBoard();
+
+  const isOwnProfile = currentUser?.userId === profile.data?.id;
+
+  useEffect(() => {
+    if (profile.data && !isOwnProfile) addRecentUser(profile.data.username);
+  }, [profile.data, isOwnProfile]);
 
   if (!username) return null;
 
@@ -38,7 +45,6 @@ export function ProfilePage() {
     );
   }
 
-  const isOwnProfile = currentUser?.userId === profile.data.id;
   const items: BoardCardData[] = (boards.data ?? []).map((board) => ({
     id: board.id,
     name: board.name,

@@ -11,7 +11,11 @@ export interface Board {
   updated: string;
 }
 
-export async function createBoard(name: string, description: string, scene: Blob) {
+export async function createBoard(
+  name: string,
+  description: string,
+  scene: Blob
+) {
   const form = new FormData();
   form.append("Name", name);
   form.append("Description", description);
@@ -41,14 +45,40 @@ export async function deleteBoard(id: string) {
   await api.delete(`/api/boards/${id}`);
 }
 
-export async function listUserBoards(userId: string, page: number, pageSize: number) {
+export async function getUploadUrl(boardId: string, fileId: string) {
+  const res = await api.get<string>(
+    `/api/boards/${boardId}/uploadUrl/${fileId}`
+  );
+  return res.data;
+}
+
+export async function getDownloadUrls(boardId: string, fileIds: string[]) {
+  const res = await api.post<Record<string, string>>(
+    `/api/boards/${boardId}/downloadUrls`,
+    { fileIds }
+  );
+  return res.data;
+}
+
+// todo:backend
+export async function updateBoard(
+  id: string,
+  data: { name: string; description: string; tags: string[] }
+) {
+  await api.patch(`/api/boards/${id}`, data);
+}
+
+export async function listUserBoards(
+  userId: string,
+  page: number,
+  pageSize: number
+) {
   try {
     const res = await api.get<Board[]>(`/api/boards/u/${userId}`, {
       params: { page, pageSize },
     });
     return res.data;
   } catch (err) {
-    // The backend 404s when a user has no (visible) boards at all — treat that as an empty list.
     if (isAxiosError(err) && err.response?.status === 404) return [];
     throw err;
   }

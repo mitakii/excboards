@@ -1,7 +1,8 @@
 // Placeholder data for features the backend doesn't support yet: public board
-// discovery, tag recommendations, recently-viewed tracking, and other-user
-// profiles. None of this hits the real API — every function here is a pure,
-// synchronous stand-in so it's a drop-in swap once real endpoints exist.
+// discovery, tag recommendations, recently-viewed tracking, other-user
+// profiles, and board collaborator lists. None of this hits the real API —
+// every function here is a pure, synchronous stand-in so it's a drop-in swap
+// once real endpoints exist.
 
 export interface MockBoardOwner {
   username: string;
@@ -22,6 +23,17 @@ export interface MockUserProfile {
   pfpUrl?: string;
   description: string;
 }
+
+export interface MockCollaborator {
+  userId: string;
+  username: string;
+  permission: "Viewer" | "Editor";
+}
+
+const MOCK_COLLABORATORS: MockCollaborator[] = [
+  { userId: "u1", username: "amelia-dev", permission: "Editor" },
+  { userId: "u2", username: "jorge.p", permission: "Viewer" },
+];
 
 const OWNERS: MockBoardOwner[] = [
   { username: "amelia-dev" },
@@ -86,6 +98,10 @@ export function getUserProfile(username: string): MockUserProfile {
     username,
     description: "Placeholder bio — user descriptions aren't stored by the backend yet.",
   };
+}
+
+export function getBoardCollaborators(_boardId: string): MockCollaborator[] {
+  return MOCK_COLLABORATORS;
 }
 
 export function getUserBoards(username: string, page: number, pageSize: number) {

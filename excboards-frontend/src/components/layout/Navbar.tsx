@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { LogOutIcon, PenSquareIcon, UserIcon } from "lucide-react";
+import { LogOutIcon, PanelLeftIcon, PenSquareIcon, UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -11,9 +11,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useLogout, useStatus } from "@/features/auth/queries";
+import { BoardFormDialog } from "@/features/boards/components/BoardFormDialog";
 import { SearchBar } from "./SearchBar";
 
-export function Navbar() {
+export function Navbar({
+  sidebarOpen,
+  onToggleSidebar,
+}: {
+  sidebarOpen: boolean;
+  onToggleSidebar: () => void;
+}) {
   const { data: user } = useStatus();
   const logout = useLogout();
   const navigate = useNavigate();
@@ -31,6 +38,15 @@ export function Navbar() {
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onToggleSidebar}
+          aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+        >
+          <PanelLeftIcon />
+        </Button>
+
         <Link
           to="/"
           className="shrink-0 text-base font-semibold text-foreground"
@@ -43,10 +59,14 @@ export function Navbar() {
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {user ? (
             <>
-              <Button size="sm" onClick={() => navigate("/boards/new")}>
-                <PenSquareIcon />
-                New board
-              </Button>
+              <BoardFormDialog
+                trigger={
+                  <Button size="sm">
+                    <PenSquareIcon />
+                    New board
+                  </Button>
+                }
+              />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button type="button" aria-label="Account menu">

@@ -6,7 +6,6 @@ import { RegisterPage } from "@/features/auth/RegisterPage";
 import { HomePage } from "@/features/home/HomePage";
 import { SearchPage } from "@/features/search/SearchPage";
 import { ProfilePage } from "@/features/profile/ProfilePage";
-import { CreateBoardPage } from "@/features/boards/CreateBoardPage";
 import { ViewBoardPage } from "@/features/boards/ViewBoardPage";
 
 function App() {
@@ -20,7 +19,6 @@ function App() {
           <Route path="search" element={<SearchPage />} />
 
           <Route element={<ProtectedRoute />}>
-            <Route path="boards/new" element={<CreateBoardPage />} />
             <Route path="boards/:id" element={<ViewBoardPage />} />
           </Route>
 
