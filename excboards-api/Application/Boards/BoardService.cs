@@ -167,7 +167,7 @@ public class BoardService(IBoardRepository boardRepository,
         return userBoards;
     }
 
-    public async Task<ErrorOr<Dictionary<Guid, string>>> GetDownloadPresignedUrls(Guid userId, Guid boardId, List<Guid> sceneFileIds)
+    public async Task<ErrorOr<Dictionary<string, string>>> GetDownloadPresignedUrls(Guid userId, Guid boardId, List<string> sceneFileIds)
     {
         if(!await permissionService.CanViewAsync(userId, boardId))
             return Error.NotFound("Board.NotFound", "Board not found");
@@ -180,8 +180,8 @@ public class BoardService(IBoardRepository boardRepository,
 
         return result.ToDictionary(k => k.FileId, v => v.FileUrl);
     }
-    
-    public async Task<ErrorOr<string>> GetDownloadPresignedUrl(Guid userId, Guid boardId, Guid fileId)
+
+    public async Task<ErrorOr<string>> GetDownloadPresignedUrl(Guid userId, Guid boardId, string fileId)
     {
         if (!await permissionService.CanViewAsync(userId, boardId))
             return Error.NotFound("Board.NotFound", "Board not found");
@@ -191,7 +191,7 @@ public class BoardService(IBoardRepository boardRepository,
         return result;
     }
 
-    public async Task<ErrorOr<string>> GetUploadPresignedUrl(Guid userId, Guid boardId, Guid fileId)
+    public async Task<ErrorOr<string>> GetUploadPresignedUrl(Guid userId, Guid boardId, string fileId)
     {
         if (!await permissionService.CanViewAsync(userId, boardId))
             return Error.NotFound("Board.NotFound", "Board not found");

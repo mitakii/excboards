@@ -109,19 +109,19 @@ public class BoardsController
         return Ok(result.Value);
     }
     
-    [HttpGet("{boardId:guid}/downloadUrl/{fileId:guid}")]
-    public async Task<IActionResult> GetFilePresignedUrl(Guid boardId, Guid fileId)
+    [HttpGet("{boardId:guid}/downloadUrl/{fileId}")]
+    public async Task<IActionResult> GetFilePresignedUrl(Guid boardId, string fileId)
     {
         var result = await boardService
             .GetDownloadPresignedUrl(User.GetUserId(), boardId, fileId);
         if(result.IsError)
             return result.ToProblem(this);
-        
+
         return Ok(result.Value);
     }
 
-    [HttpGet("{boardId:guid}/uploadUrl/{fileId:guid}")]
-    public async Task<IActionResult> GetUploadUrl(Guid boardId, Guid fileId)
+    [HttpGet("{boardId:guid}/uploadUrl/{fileId}")]
+    public async Task<IActionResult> GetUploadUrl(Guid boardId, string fileId)
     {
         var result = await boardService.GetUploadPresignedUrl(User.GetUserId(), boardId, fileId);
         if (result.IsError)
