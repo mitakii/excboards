@@ -1,3 +1,5 @@
+using excboards_api.Contracts.Tag;
+
 namespace excboards_api.Contracts.Boards;
 
 public sealed record BoardResponse(
@@ -6,4 +8,5 @@ public sealed record BoardResponse(
     string? Description,
     bool IsPublished,
     DateTime Created,
-    DateTime Updated);
+    DateTime Updated, 
+    List<TagResponse> Tags);

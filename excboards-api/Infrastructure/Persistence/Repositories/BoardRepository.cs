@@ -29,6 +29,7 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
 
     public Task UpdateAsync(UserBoard board)
     {
+        board.Updated = DateTime.UtcNow;
         context.UserBoards.Update(board);
         return context.SaveChangesAsync();
     }

@@ -14,7 +14,7 @@ using Microsoft.Extensions.Options;
 namespace excboards_api.Controllers;
 
 [ApiController]
-[Route("api/auth")]
+[Route("api/[controller]")]
 public class AuthController(
     UserManager<User> userManager,
     IAuthService authService,
@@ -56,7 +56,7 @@ public class AuthController(
 
         var login = result.Value;
         Response.SetAuthCookies(login.Tokens.AccessToken, login.Tokens.RefreshToken, _jwtOptions);
-        return Ok(new { login.UserId, login.UserName, login.Email });
+        return Ok(new LoginResponse( login.UserId, login.UserName, login.Email));
     }
 
     [AllowAnonymous]

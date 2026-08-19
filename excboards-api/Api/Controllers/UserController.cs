@@ -5,6 +5,7 @@ using excboards_api.Attributes;
 using excboards_api.Contracts.Boards;
 using excboards_api.Contracts.User;
 using excboards_api.Extensions;
+using excboards_api.Mappers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,7 +22,7 @@ public class UserController(IUserService userService) : ControllerBase
         if (result.IsError)
             return result.ToProblem(this);
 
-        return Ok(result.Value);
+        return Ok(result.Value.MapToResponse());
     }
 
     [HttpGet("username/{username}")]
@@ -31,7 +32,7 @@ public class UserController(IUserService userService) : ControllerBase
         if (result.IsError)
             return result.ToProblem(this);
 
-        return Ok(result.Value);
+        return Ok(result.Value.MapToResponse());
     }
 
     [HttpGet("search")]
@@ -41,9 +42,9 @@ public class UserController(IUserService userService) : ControllerBase
         if(result.IsError)
             return result.ToProblem(this);
         
-        return Ok(new SearchResponse<UserDto>(
-            result.Value.Data.ToList(),
-            result.Value.Data.Count,
+        return Ok(new SearchResponse<UserResponse>(
+            result.Value.Data.MapToResponse(),
+            result.Value.Total,
             result.Value.Page,
             result.Value.PageSize
         ));

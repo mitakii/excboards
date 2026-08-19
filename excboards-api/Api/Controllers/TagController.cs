@@ -1,4 +1,5 @@
 using Application.Boards;
+using Application.Mappers;
 using Application.Tags;
 using Domain.Interfaces;
 using excboards_api.Contracts.Boards;
@@ -20,6 +21,6 @@ public class TagController(TagService tagService): ControllerBase
         if(result.IsError)
             return result.ToProblem(this);
         
-        return Ok(result);
+        return Ok(result.Value.MapToDto());
     }
 }

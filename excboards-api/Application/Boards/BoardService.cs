@@ -1,6 +1,7 @@
 using System.Net;
 using Application.Dto;
 using Application.Interfaces;
+using Application.Mappers;
 using Application.Storage;
 using Domain.Entities;
 using Domain.Exceptions;
@@ -11,7 +12,8 @@ namespace Application.Boards;
 
 public class BoardService(IBoardRepository boardRepository, 
     IFileRepository fileRepository,
-    IPermissionService permissionService)
+    IPermissionService permissionService,
+    ITagRepository tagRepository)
 {
     public async Task<ErrorOr<Guid>> CreateAsync(Guid userId, string name, string description, Stream stream)
     {
@@ -46,23 +48,23 @@ public class BoardService(IBoardRepository boardRepository,
         return board.Id;
     }
 
-    public async Task<ErrorOr<PagedResult<UserBoard>>> SearchAsync(Guid userId, string query, int page = 1, int pageSize = 10)
+    public async Task<ErrorOr<PagedResult<UserBoardDto>>> SearchAsync(Guid userId, string query, int page = 1, int pageSize = 10)
     {
         if(string.IsNullOrWhiteSpace(query))
             return Error.Validation("Board.SearchQuery", "Search query is required.");
         
         var boards = await boardRepository.SearchAsync(userId, query, page, pageSize);
         
-        return new PagedResult<UserBoard>()
+        return new PagedResult<UserBoardDto>()
         {
-            Data = boards,
+            Data = boards.MapToDto(),
             Page = page,
             PageSize = pageSize,
             Total = boards.Count
         };
     }
 
-    public async Task<ErrorOr<UserBoard>> GetByIdAsync(Guid userId, Guid boardId)
+    public async Task<ErrorOr<UserBoardDto>> GetByIdAsync(Guid userId, Guid boardId)
     {
         var board = await boardRepository.GetByIdAsync(boardId);
         if (board == null)
@@ -71,7 +73,7 @@ public class BoardService(IBoardRepository boardRepository,
         if (!await permissionService.CanViewAsync(userId, boardId))
             return Error.NotFound("Board.NotFound", "Board not found");
 
-        return board;
+        return board.MapToDto();
     }
 
     public async Task<ErrorOr<Stream>> GetSceneAsync(Guid userId, Guid boardId)
@@ -89,6 +91,8 @@ public class BoardService(IBoardRepository boardRepository,
     public async Task<ErrorOr<Updated>> SaveSceneAsync(Guid userId, Guid boardId, Stream stream)
     {
         var board = await boardRepository.GetByIdAsync(boardId);
+        if (board == null)
+            return Error.NotFound("Board.NotFound", "Board not found");
         
         var permission = await SafeCheckEditPermissionAsync(userId, board);
         if (permission.IsError)
@@ -99,6 +103,25 @@ public class BoardService(IBoardRepository boardRepository,
         board!.Updated = DateTime.UtcNow;
         await boardRepository.UpdateAsync(board);
 
+        return Result.Updated;
+    }
+    
+    public async Task<ErrorOr<Updated>> UpdateBoardAsync(Guid userId, Guid boardId, UserBoardUpdateDto dto)
+    {
+        var board = await boardRepository.GetByIdAsync(boardId);
+        if (board == null)
+            return Error.NotFound("Board.NotFound", "Board not found");
+        
+        var permission = await SafeCheckEditPermissionAsync(userId, board);
+        if(permission.IsError)
+            return permission.Errors;
+        
+        board.Description = string.IsNullOrWhiteSpace(dto.Description) ? board.Description : dto.Description;
+        board.Name = string.IsNullOrWhiteSpace(dto.Name) ? board.Name : dto.Name;
+        if (dto.Tags.Count > 0)
+            board.Tags = await tagRepository.CreateTagsAsync(dto.Tags);
+        
+        await boardRepository.UpdateAsync(board);
         return Result.Updated;
     }
 
@@ -156,7 +179,7 @@ public class BoardService(IBoardRepository boardRepository,
         return true;
     }
 
-    public async Task<ErrorOr<List<UserBoard>?>> GetUserBoards(Guid requestUserId, Guid currentUserId, int pageNumber, int pageSize)
+    public async Task<ErrorOr<List<UserBoardDto>?>> GetUserBoards(Guid requestUserId, Guid currentUserId, int pageNumber, int pageSize)
     {
         var userBoards = await boardRepository
             .GetAllByUserIdPagedAsync(requestUserId, currentUserId, pageNumber, pageSize);
@@ -164,7 +187,7 @@ public class BoardService(IBoardRepository boardRepository,
         if(userBoards.Count == 0)
             return Error.NotFound("Board.NotFound", "Board not found");
         
-        return userBoards;
+        return userBoards.MapToDto();
     }
 
     public async Task<ErrorOr<Dictionary<string, string>>> GetDownloadPresignedUrls(Guid userId, Guid boardId, List<string> sceneFileIds)

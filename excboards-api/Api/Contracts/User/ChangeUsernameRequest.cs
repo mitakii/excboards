@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace excboards_api.Contracts.User;
 
-public record ChangeUsernameRequest(string NewUsername, string Password);
+public sealed record ChangeUsernameRequest([Required] string NewUsername,[Required] string Password);

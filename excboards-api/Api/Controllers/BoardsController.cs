@@ -1,13 +1,15 @@
 using Application.Boards;
+using Application.Dto;
 using excboards_api.Contracts.Boards;
 using excboards_api.Extensions;
+using excboards_api.Mappers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace excboards_api.Controllers;
 
 [ApiController]
-[Route("api/boards")]
+[Route("api/[controller]")]
 [Authorize]
 public class BoardsController
     (BoardService boardService, BoardCollaboratorService boardCollaboratorService) : ControllerBase
@@ -22,7 +24,24 @@ public class BoardsController
         if (result.IsError)
             return result.ToProblem(this);
 
-        return Ok(result.Value);
+        return Created();
+    }
+
+    [HttpPatch("{boardId:guid}")]
+    public async Task<IActionResult> UpdateBoard(Guid boardId, [FromBody] BoardUpdateRequest request)
+    {
+        var dto = new UserBoardUpdateDto()
+        {
+            Description = request.Description,
+            Name = request.Name,
+            Tags = request.Tags
+        };
+        
+        var result = await boardService.UpdateBoardAsync(User.GetUserId(), boardId, dto);
+        if(result.IsError)
+            return result.ToProblem(this);
+        
+        return Ok();
     }
 
     [HttpDelete("{boardId:guid}")]
@@ -43,8 +62,7 @@ public class BoardsController
         if (result.IsError)
             return result.ToProblem(this);
 
-        return Ok(result.Value.Select(board => new BoardResponse
-            (board.Id, board.Name, board.Description, board.IsPublished, board.Created, board.Updated)));
+        return Ok(result.Value.MapToResponse());
     }
     
     [HttpGet("{id:guid}")]
@@ -53,10 +71,8 @@ public class BoardsController
         var result = await boardService.GetByIdAsync(User.GetUserId(), id);
         if (result.IsError)
             return result.ToProblem(this);
-
-        var board = result.Value;
-        return Ok(new BoardResponse
-            (board.Id, board.Name, board.Description, board.IsPublished, board.Created, board.Updated));
+        
+        return Ok(result.Value.MapToResponse());
     }
 
     [HttpGet("search")]
@@ -66,11 +82,11 @@ public class BoardsController
         if(result.IsError)
             return  result.ToProblem(this);
         
-        return Ok(new SearchResponse<BoardResponse>(result.Value.Data.Select(board =>  
-                new BoardResponse
-                    (board.Id, board.Name, board.Description, board.IsPublished, board.Created, board.Updated))
-                .ToList(),
-            result.Value.Total, result.Value.Page, result.Value.PageSize));
+        return Ok(new SearchResponse<BoardResponse>(
+            Result: result.Value.Data.MapToResponse(),
+            result.Value.Total, 
+            result.Value.Page, 
+            result.Value.PageSize));
     }
 
     [HttpGet("{id:guid}/scene")]
@@ -138,7 +154,7 @@ public class BoardsController
         if (result.IsError)
             return result.ToProblem(this);
 
-        return Ok();
+        return Created();
     }
 
     [HttpPut("{boardId:guid}/collaborators/{userId:guid}")]
@@ -162,5 +178,16 @@ public class BoardsController
             return result.ToProblem(this);
 
         return Ok();
+    }
+
+    [HttpGet("{boardId:guid}/collaborators")]
+    public async Task<IActionResult> GetBoardCollaborators(Guid boardId)
+    {
+        var result = await  boardCollaboratorService.GetAllBoardCollaborators(boardId, User.GetUserId());
+        
+        if(result.IsError)
+            return result.ToProblem(this);
+        
+        return Ok(result.Value.MapToResponse());
     }
 }

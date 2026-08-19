@@ -1,4 +1,6 @@
+using Application.Dto;
 using Application.Interfaces;
+using Application.Mappers;
 using Domain.Entities;
 using Domain.Enums;
 using Domain.Interfaces;
@@ -86,5 +88,18 @@ public class BoardCollaboratorService(
             return Error.Forbidden("Board.Forbidden", "Only the board owner can manage collaborators.");
 
         return null;
+    }
+
+    public async Task<ErrorOr<List<BoardCollaboratorDto>>> GetAllBoardCollaborators(Guid boardId, Guid userId)
+    {
+        var permission = await permissionService.CanViewAsync(userId, boardId);
+        if(!permission)
+            return Error.NotFound("Board.NotFound", "Board not found");
+        
+        var collaborators = await collaboratorRepository.GetAllByBoardIdAsync(boardId);
+        if(collaborators.Count == 0)
+            return Error.NotFound("Collaborators.NotFound", "Collaborators not found");
+
+        return collaborators.Select(c => c.MapToDto()).ToList();
     }
 }

@@ -19,6 +19,11 @@ public class BoardCollaboratorRepository(AppDbContext context) : IBoardCollabora
             .ToListAsync();
     }
 
+    public Task<List<BoardCollaborator>> GetAllByBoardIdAsync(Guid boardId)
+    {
+        return context.BoardCollaborators.Where(c => c.BoardId == boardId).ToListAsync();
+    }
+
     public Task AddAsync(BoardCollaborator collaborator)
     {
         context.BoardCollaborators.Add(collaborator);

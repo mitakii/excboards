@@ -2,6 +2,7 @@ using Application.Dto;
 using Application.Interfaces;
 using ErrorOr;
 using Infrastructure.Identity.Interfaces;
+using Infrastructure.Mappers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -16,14 +17,7 @@ public class UserService(IUserRepository userRepository, UserManager<User> userM
         if (user is null)
             return Error.NotFound("User.NotFound","User not found");
 
-        return new UserDto
-        {
-            Id = user.Id,
-            Email = user.Email,
-            Username = user.UserName,
-            CreatedAtUtc = user.CreatedAtUtc,
-            ProfilePictureUrl = user.ProfilePictureUrl,
-        };
+        return user.MapToDto();
     }
 
     public async Task<ErrorOr<UserDto>> GetUserByNameAsync(string username)
@@ -32,14 +26,7 @@ public class UserService(IUserRepository userRepository, UserManager<User> userM
         if (user is null)
             return Error.NotFound("User.NotFound", "User not found");
         
-        return new UserDto
-        {
-            Id = user.Id,
-            Email = user.Email,
-            Username = user.UserName,
-            CreatedAtUtc = user.CreatedAtUtc,
-            ProfilePictureUrl = user.ProfilePictureUrl,
-        };
+        return user.MapToDto();
     }
 
     public async Task<ErrorOr<PagedResult<UserDto>>> SearchAsync(string query, int page, int pageSize)
@@ -51,14 +38,7 @@ public class UserService(IUserRepository userRepository, UserManager<User> userM
             Total = users.Count,
             Page = page,
             PageSize = pageSize,
-            Data = users.Select(user => new UserDto
-            {
-                Id = user.Id,
-                Email = user.Email,
-                Username = user.UserName,
-                CreatedAtUtc = user.CreatedAtUtc,
-                ProfilePictureUrl = user.ProfilePictureUrl,
-            }).ToList()
+            Data = users.MapToDto()
         };
     }
 
