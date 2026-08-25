@@ -10,4 +10,7 @@ public static class TagResponseMapper
     
     public static List<TagResponse> MapToResponse(this List<TagDto> dtos) =>
         dtos.Select(MapToResponse).ToList();
+    
+    public static List<TagResponse> MapToResponse(this IReadOnlyList<TagDto> dtos) =>
+        dtos.Select(MapToResponse).ToList();
 }

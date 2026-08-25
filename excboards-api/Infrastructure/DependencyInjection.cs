@@ -13,6 +13,7 @@ using Infrastructure.Persistence;
 using Infrastructure.Persistence.Repositories;
 using Infrastructure.Security;
 using Infrastructure.Storage;
+using Infrastructure.Storage.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -24,13 +25,12 @@ namespace Infrastructure;
 
 public static class InfrastructureServiceCollectionExtensions
 {
-    public static IHostApplicationBuilder AddInfrastructure(this IHostApplicationBuilder builder)
+    public static IHostApplicationBuilder AddInfrastructure(this IHostApplicationBuilder builder) =>
+        builder.AddPersistence().AddStorage().AddIdentityAndAuth().AddBoardServices();
+    
+    
+    public static IHostApplicationBuilder AddIdentityAndAuth(this IHostApplicationBuilder builder)
     {
-        builder.Services.AddDbContext<AppDbContext>(options =>
-            options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-        builder.Services.Configure<MinioOptions>(builder.Configuration.GetSection("Minio"));
-        
         builder.Services
             .AddIdentityCore<User>(options =>
             {
@@ -45,10 +45,38 @@ public static class InfrastructureServiceCollectionExtensions
             .AddEntityFrameworkStores<AppDbContext>()
             .AddSignInManager()
             .AddDefaultTokenProviders();
-
         builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("JwtOptions"));
-        builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
         builder.Services.AddScoped<ITokenService, TokenService>();
+
+        builder.Services.AddScoped<IUserService, UserService>();
+        builder.Services.AddScoped<IAuthService, AuthService>();
+        
+        builder.Services.AddScoped<IUserRepository, UserRepository>();
+        return builder;
+    } 
+    
+    public static IHostApplicationBuilder AddStorage(this IHostApplicationBuilder builder)
+    {
+        builder.Services.Configure<MinioOptions>(builder.Configuration.GetSection("Minio"));
+        builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
+        
+        builder.Services.AddSingleton<MinioStorage>();
+        builder.Services.AddScoped<IFileRepository, MinioFileRepository>();
+        builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
+        
+        return builder;
+    } 
+    
+    public static IHostApplicationBuilder AddPersistence(this IHostApplicationBuilder builder)
+    {
+        builder.Services.AddDbContext<AppDbContext>(options =>
+            options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+        return builder;
+    } 
+    
+    public static IHostApplicationBuilder AddBoardServices(this IHostApplicationBuilder builder)
+    {
         builder.Services.AddScoped<IPermissionService, PermissionService>();
         builder.Services.AddScoped<IBoardRepository, BoardRepository>();
         builder.Services.AddScoped<ITagRepository, TagRepository>();
@@ -56,19 +84,7 @@ public static class InfrastructureServiceCollectionExtensions
         builder.Services.AddScoped<BoardService>();
         builder.Services.AddScoped<IBoardCollaboratorRepository, BoardCollaboratorRepository>();
         builder.Services.AddScoped<BoardCollaboratorService>();
-        
-        builder.Services.AddHostedService<RefreshTokenCleanupService>();
-        
-        builder.Services.AddSingleton<MinioStorage>();
-        builder.Services.AddScoped<IFileRepository, MinioFileRepository>();
-        
-        builder.Services.AddScoped<IUserService, UserService>();
-        builder.Services.AddScoped<IAuthService, AuthService>();
-        
-        builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
-
-        builder.Services.AddScoped<IUserRepository, UserRepository>();
 
         return builder;
-    }
+    } 
 }

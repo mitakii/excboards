@@ -3,6 +3,7 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Application.Interfaces;
 using Application.Storage;
+using Infrastructure.Storage.Dto;
 using Microsoft.Extensions.Options;
 using Minio;
 
@@ -28,11 +29,7 @@ public class MinioStorage
         _bucketName = settings.BucketName;
         _scheme = new Uri(settings.ServiceURL).Scheme;
     }
-
-    // The SDK's presign signer always emits "https" regardless of ServiceURL's scheme or
-    // AmazonS3Config.UseHttp (verified against AWSSDK.S3 4.0.101.6 — neither affects it).
-    // Rewriting the scheme afterwards is safe: SigV4 signs the Host header, not the URL scheme,
-    // so the signature stays valid.
+    
     private string WithConfiguredScheme(string presignedUrl) =>
         new UriBuilder(presignedUrl) { Scheme = _scheme }.Uri.ToString();
 
@@ -104,5 +101,49 @@ public class MinioStorage
             Expires = DateTime.UtcNow.Add(expiry)
         });
         return WithConfiguredScheme(url);
+    }
+
+    public async Task<bool> DeleteFileAsync(string key)
+    {
+        var response = await _client.DeleteObjectAsync(_bucketName, key);
+        return response.HttpStatusCode is System.Net.HttpStatusCode.OK or System.Net.HttpStatusCode.NoContent;
+    }
+    
+    public async Task<bool> DeleteFilesAsync(IEnumerable<string> keys)
+    {
+        var allSucceeded = true;
+        foreach (var chunk in keys.Chunk(1000))
+        {
+            var request = new DeleteObjectsRequest()
+            {
+                BucketName = _bucketName,
+                Objects = chunk.Select(k => new KeyVersion { Key = k }).ToList()
+            };
+            var response = await _client.DeleteObjectsAsync(request);
+            
+            if(response.DeleteErrors is {Count: > 0}) allSucceeded = false;
+        }
+        return allSucceeded;
+    }
+
+    public async Task<IReadOnlyList<StorageObjectInfo>> ListObjectsAsync(string prefix)
+    {
+        var request = new ListObjectsV2Request
+        {
+            BucketName = _bucketName,
+            MaxKeys = 100,
+            Prefix = prefix
+        };
+
+        var result = new List<StorageObjectInfo>();
+
+        do
+        {
+            var response = await _client.ListObjectsV2Async(request);
+            result.AddRange(response.S3Objects.Select(o =>new StorageObjectInfo(o.Key, o.LastModified!.Value)));
+            request.ContinuationToken = response.NextContinuationToken;
+        } while (!string.IsNullOrEmpty(request.ContinuationToken));
+        
+        return result;
     }
 }

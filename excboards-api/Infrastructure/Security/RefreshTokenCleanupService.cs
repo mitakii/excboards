@@ -6,8 +6,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Security;
 
-/// Table-hygiene only: the security property (reuse detection) is already enforced inline
-/// on every /refresh call regardless of whether this runs.
 public sealed class RefreshTokenCleanupService(
     IServiceScopeFactory scopeFactory,
     ILogger<RefreshTokenCleanupService> logger) : BackgroundService

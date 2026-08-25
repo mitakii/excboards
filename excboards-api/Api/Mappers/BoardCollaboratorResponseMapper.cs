@@ -7,11 +7,11 @@ namespace excboards_api.Mappers;
 public static class BoardCollaboratorResponseMapper
 {
     public static BoardCollaboratorResponse MapToResponse(this BoardCollaboratorDto dto) =>
-        new BoardCollaboratorResponse(
+        new (
             dto.BoardId, 
             dto.UserId, 
             dto.CreatedAt, 
-            Permission: dto.Permission == PermissionLevel.Editor ? "Edit" : "View");
+            Permission: dto.Permission.ToString());
     
     public static List<BoardCollaboratorResponse> MapToResponse(this List<BoardCollaboratorDto> dtos) => 
         dtos.Select(MapToResponse).ToList();

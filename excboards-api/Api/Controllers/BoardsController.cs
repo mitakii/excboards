@@ -24,7 +24,7 @@ public class BoardsController
         if (result.IsError)
             return result.ToProblem(this);
 
-        return Created();
+        return Created($"/api/boards/{result.Value}", result.Value);
     }
 
     [HttpPatch("{boardId:guid}")]
@@ -47,7 +47,7 @@ public class BoardsController
     [HttpDelete("{boardId:guid}")]
     public async Task<IActionResult> Delete(Guid boardId)
     {
-        var result = await boardService.RemoveAsync(User.GetUserId(), boardId);
+        var result = await boardService.DeleteAsync(User.GetUserId(), boardId);
         if (result.IsError)
             return result.ToProblem(this);
         
@@ -104,7 +104,7 @@ public class BoardsController
     {
         await using var stream = request.Scene.OpenReadStream();
 
-        var result = await boardService.SaveSceneAsync(User.GetUserId(), id, stream);
+        var result = await boardService.SaveSceneAsync(User.GetUserId(), id, request.SceneHash, stream);
         if (result.IsError)
             return result.ToProblem(this);
 
@@ -183,7 +183,7 @@ public class BoardsController
     [HttpGet("{boardId:guid}/collaborators")]
     public async Task<IActionResult> GetBoardCollaborators(Guid boardId)
     {
-        var result = await  boardCollaboratorService.GetAllBoardCollaborators(boardId, User.GetUserId());
+        var result = await boardCollaboratorService.GetAllBoardCollaborators(boardId, User.GetUserId());
         
         if(result.IsError)
             return result.ToProblem(this);

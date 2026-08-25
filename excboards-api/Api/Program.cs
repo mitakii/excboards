@@ -47,7 +47,6 @@ builder.Services.AddAuthentication(options =>
     };
     options.Events = new JwtBearerEvents
     {
-        // Auth lives in an httpOnly cookie (JS can't read it), not the Authorization header.
         OnMessageReceived = context =>
         {
             if (context.Request.Cookies.TryGetValue(AuthCookieNames.AccessToken, out var token))

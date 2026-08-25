@@ -43,6 +43,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
 
             b.Property(x => x.Name).HasMaxLength(200);
             b.Property(x => x.Description).HasMaxLength(1000);
+            
+            b.HasQueryFilter(x => x.DeletedAt == null);
         });
 
         builder.Entity<UserProject>(p =>
@@ -80,6 +82,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
                 .OnDelete(DeleteBehavior.Cascade);
 
             c.HasIndex(x => new { x.BoardId, x.UserId }).IsUnique();
+            
+            c.HasQueryFilter(x => x.Board.DeletedAt == null);
         });
     }
 }

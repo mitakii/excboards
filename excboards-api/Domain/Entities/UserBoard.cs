@@ -7,6 +7,8 @@ public class UserBoard
     public bool IsPublished { get; set; }
     public DateTime Created { get; set; }
     public DateTime Updated { get; set; }
+    public DateTime? DeletedAt { get; set; }
+    public long BoardHash { get; set; }
     
     public string Name { get; set; }
     public string NormalizedName { get; set; }

@@ -97,9 +97,7 @@ public class BoardCollaboratorService(
             return Error.NotFound("Board.NotFound", "Board not found");
         
         var collaborators = await collaboratorRepository.GetAllByBoardIdAsync(boardId);
-        if(collaborators.Count == 0)
-            return Error.NotFound("Collaborators.NotFound", "Collaborators not found");
 
-        return collaborators.Select(c => c.MapToDto()).ToList();
+        return collaborators.MapToDto();
     }
 }

@@ -3,7 +3,9 @@ using Application.Mappers;
 using Application.Tags;
 using Domain.Interfaces;
 using excboards_api.Contracts.Boards;
+using excboards_api.Contracts.Tag;
 using excboards_api.Extensions;
+using excboards_api.Mappers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,6 +23,10 @@ public class TagController(TagService tagService): ControllerBase
         if(result.IsError)
             return result.ToProblem(this);
         
-        return Ok(result.Value.MapToDto());
+        return Ok(new SearchResponse<TagResponse>(
+            Result: result.Value.Data.MapToResponse(), 
+            result.Value.Page, 
+            result.Value.PageSize, 
+            result.Value.Total));
     }
 }

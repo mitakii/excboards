@@ -1,6 +1,7 @@
 using Application.Interfaces;
+using Infrastructure.Storage.Dto;
 
-namespace Infrastructure.Storage;
+namespace Infrastructure.Storage.Repositories;
 
 public class MinioFileRepository(MinioStorage storage) : IFileRepository
 {
@@ -22,5 +23,20 @@ public class MinioFileRepository(MinioStorage storage) : IFileRepository
     public async Task<string> GetDownloadUrlAsync(string key, TimeSpan expiry)
     {
         return await storage.GetPresignedDownloadUrlAsync(key, expiry);
+    }
+
+    public async Task<IReadOnlyList<StorageObjectInfo>> ListObjectsAsync(string prefix)
+    {
+        return await storage.ListObjectsAsync(prefix);
+    }
+
+    public async Task<bool> DeleteFileAsync(string key)
+    {
+        return await storage.DeleteFileAsync(key);
+    }
+
+    public async Task<bool> DeleteFilesAsync(IEnumerable<string> keys)
+    {
+        return await storage.DeleteFilesAsync(keys);
     }
 }

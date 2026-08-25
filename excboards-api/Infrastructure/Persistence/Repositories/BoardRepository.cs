@@ -23,7 +23,7 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
 
     public Task RemoveAsync(UserBoard board)
     {
-        context.UserBoards.Remove(board);
+        board.DeletedAt = DateTime.UtcNow;
         return context.SaveChangesAsync();
     }
 

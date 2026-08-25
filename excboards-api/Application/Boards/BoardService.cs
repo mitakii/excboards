@@ -88,7 +88,7 @@ public class BoardService(IBoardRepository boardRepository,
         return await fileRepository.GetFileAsync(BoardFileKeys.Scene(boardId));
     }
 
-    public async Task<ErrorOr<Updated>> SaveSceneAsync(Guid userId, Guid boardId, Stream stream)
+    public async Task<ErrorOr<Updated>> SaveSceneAsync(Guid userId, Guid boardId, long sceneHash, Stream stream)
     {
         var board = await boardRepository.GetByIdAsync(boardId);
         if (board == null)
@@ -98,6 +98,9 @@ public class BoardService(IBoardRepository boardRepository,
         if (permission.IsError)
             return permission.Errors;
 
+        if (board.BoardHash == sceneHash)
+            return Result.Updated;
+        
         await fileRepository.UploadFileAsync(BoardFileKeys.Scene(boardId), stream);
 
         board!.Updated = DateTime.UtcNow;
@@ -118,6 +121,8 @@ public class BoardService(IBoardRepository boardRepository,
         
         board.Description = string.IsNullOrWhiteSpace(dto.Description) ? board.Description : dto.Description;
         board.Name = string.IsNullOrWhiteSpace(dto.Name) ? board.Name : dto.Name;
+        board.NormalizedName = board.Name.ToLower();
+        
         if (dto.Tags.Count > 0)
             board.Tags = await tagRepository.CreateTagsAsync(dto.Tags);
         
@@ -125,7 +130,7 @@ public class BoardService(IBoardRepository boardRepository,
         return Result.Updated;
     }
 
-    public async Task<ErrorOr<Deleted>> RemoveAsync(Guid userId, Guid boardId)
+    public async Task<ErrorOr<Deleted>> DeleteAsync(Guid userId, Guid boardId)
     {
         var board = await boardRepository.GetByIdAsync(boardId);
         
