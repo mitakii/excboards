@@ -1,4 +1,4 @@
-using Infrastructure.Storage.Dto;
+using Application.Dto;
 
 namespace Application.Interfaces;
 

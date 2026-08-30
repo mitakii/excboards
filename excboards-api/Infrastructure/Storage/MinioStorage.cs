@@ -1,9 +1,9 @@
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
+using Application.Dto;
 using Application.Interfaces;
 using Application.Storage;
-using Infrastructure.Storage.Dto;
 using Microsoft.Extensions.Options;
 using Minio;
 

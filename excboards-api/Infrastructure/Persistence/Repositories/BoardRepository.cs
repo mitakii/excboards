@@ -27,6 +27,12 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
         return context.SaveChangesAsync();
     }
 
+    public Task DeleteAsync(List<UserBoard> boards)
+    {
+        context.UserBoards.RemoveRange(boards);
+        return context.SaveChangesAsync();
+    }
+
     public Task UpdateAsync(UserBoard board)
     {
         board.Updated = DateTime.UtcNow;

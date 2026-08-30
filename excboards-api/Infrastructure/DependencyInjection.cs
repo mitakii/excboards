@@ -15,6 +15,7 @@ using Infrastructure.Security;
 using Infrastructure.Storage;
 using Infrastructure.Storage.Repositories;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.WebSockets;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,7 +28,22 @@ public static class InfrastructureServiceCollectionExtensions
 {
     public static IHostApplicationBuilder AddInfrastructure(this IHostApplicationBuilder builder) =>
         builder.AddPersistence().AddStorage().AddIdentityAndAuth().AddBoardServices();
-    
+
+    public static IHostApplicationBuilder AddBackgroundWorkers(this IHostApplicationBuilder builder)
+    {
+        builder.Services.Configure<FileCleanupOptions>(
+            builder.Configuration.GetSection("FileCleanupOptions"));
+        builder.Services.Configure<BoardDeletionOptions>(
+            builder.Configuration.GetSection("BoardDeletionOptions"));
+        builder.Services.Configure<RefreshTokenCleanupOptions>(
+            builder.Configuration.GetSection("RefreshTokenCleanupOptions"));
+
+        builder.Services.AddScoped<OrphanedFileCleanupJob>();
+        builder.Services.AddScoped<RefreshTokenCleanupJob>();
+        builder.Services.AddScoped<DeletedBoardsCleanupJob>();
+        
+        return builder;
+    }
     
     public static IHostApplicationBuilder AddIdentityAndAuth(this IHostApplicationBuilder builder)
     {
@@ -71,14 +87,15 @@ public static class InfrastructureServiceCollectionExtensions
     {
         builder.Services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+        
+        builder.Services.AddScoped<IBoardRepository, BoardRepository>();
 
         return builder;
-    } 
+    }
     
     public static IHostApplicationBuilder AddBoardServices(this IHostApplicationBuilder builder)
     {
         builder.Services.AddScoped<IPermissionService, PermissionService>();
-        builder.Services.AddScoped<IBoardRepository, BoardRepository>();
         builder.Services.AddScoped<ITagRepository, TagRepository>();
         builder.Services.AddScoped<TagService>();
         builder.Services.AddScoped<BoardService>();
@@ -86,5 +103,5 @@ public static class InfrastructureServiceCollectionExtensions
         builder.Services.AddScoped<BoardCollaboratorService>();
 
         return builder;
-    } 
+    }
 }

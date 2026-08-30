@@ -6,6 +6,7 @@ public interface IBoardRepository
 {
     Task AddAsync(UserBoard board);
     Task RemoveAsync(UserBoard board);
+    Task DeleteAsync(List<UserBoard> boards);
     Task UpdateAsync(UserBoard board);
     
     Task<UserBoard?> GetByIdAsync(Guid id);
