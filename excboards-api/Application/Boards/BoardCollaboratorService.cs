@@ -17,7 +17,7 @@ public class BoardCollaboratorService(
     public async Task<ErrorOr<Updated>> AddAsync
         (Guid requestingUserId, Guid boardId, Guid targetUserId, PermissionLevel permission)
     {
-        var authError = await AuthorizeOwnerAsync(requestingUserId, boardId);
+        var authError = await AuthorizeAdminAsync(requestingUserId, boardId);
         if (authError is not null)
             return authError.Value;
 
@@ -48,7 +48,7 @@ public class BoardCollaboratorService(
     public async Task<ErrorOr<Updated>> UpdateAsync
         (Guid requestingUserId, Guid boardId, Guid targetUserId, PermissionLevel permission)
     {
-        var authError = await AuthorizeOwnerAsync(requestingUserId, boardId);
+        var authError = await AuthorizeAdminAsync(requestingUserId, boardId);
         if (authError is not null)
             return authError.Value;
 
@@ -63,7 +63,7 @@ public class BoardCollaboratorService(
 
     public async Task<ErrorOr<Deleted>> RemoveAsync(Guid requestingUserId, Guid boardId, Guid targetUserId)
     {
-        var authError = await AuthorizeOwnerAsync(requestingUserId, boardId);
+        var authError = await AuthorizeAdminAsync(requestingUserId, boardId);
         if (authError is not null)
             return authError.Value;
 
@@ -74,8 +74,8 @@ public class BoardCollaboratorService(
         await collaboratorRepository.RemoveAsync(collaborator);
         return Result.Deleted;
     }
-
-    private async Task<Error?> AuthorizeOwnerAsync(Guid requestingUserId, Guid boardId)
+    
+    private async Task<Error?> AuthorizeAdminAsync(Guid requestingUserId, Guid boardId)
     {
         var board = await boardRepository.GetByIdAsync(boardId);
         if (board is null)
@@ -84,7 +84,7 @@ public class BoardCollaboratorService(
         if (!await permissionService.CanViewAsync(requestingUserId, boardId))
             return Error.NotFound("Board.NotFound", "Board not found");
 
-        if (!await permissionService.IsOwnerAsync(requestingUserId, boardId))
+        if (!await permissionService.IsAdminAsync(requestingUserId, boardId))
             return Error.Forbidden("Board.Forbidden", "Only the board owner can manage collaborators.");
 
         return null;
@@ -98,6 +98,21 @@ public class BoardCollaboratorService(
         
         var collaborators = await collaboratorRepository.GetAllByBoardIdAsync(boardId);
 
-        return collaborators.MapToDto();
+        var dtos = new List<BoardCollaboratorDto>(collaborators.Count);
+        foreach (var collaborator in collaborators)
+        {
+            var dto = collaborator.MapToDto();
+
+            var user = await userService.GetUserByIdAsync(collaborator.UserId);
+            if (!user.IsError)
+            {
+                dto.Username = user.Value.Username;
+                dto.ProfilePictureUrl = user.Value.ProfilePictureUrl;
+            }
+
+            dtos.Add(dto);
+        }
+
+        return dtos;
     }
 }

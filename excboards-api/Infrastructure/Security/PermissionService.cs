@@ -22,11 +22,17 @@ public class PermissionService(AppDbContext context) : IPermissionService
     public async Task<bool> CanEditAsync(Guid userId, Guid boardId)
     {
         var access = await GetAccessAsync(userId, boardId);
-        return access is { IsOwner: true } or { CollaboratorPermission: PermissionLevel.Editor };
+        return access is { IsOwner: true } or { CollaboratorPermission: PermissionLevel.Editor or PermissionLevel.Admin};
     }
 
     public Task<bool> IsOwnerAsync(Guid userId, Guid boardId)
         => context.UserBoards.AsNoTracking().AnyAsync(b => b.Id == boardId && b.UserId == userId);
+
+    public async Task<bool> IsAdminAsync(Guid userId, Guid boardId)
+    {
+        var access = await GetAccessAsync(userId, boardId);
+        return access is { IsOwner: true } or { CollaboratorPermission: PermissionLevel.Admin };
+    }
 
     private async Task<bool> BoardIsPublicAsync(Guid boardId)
     {

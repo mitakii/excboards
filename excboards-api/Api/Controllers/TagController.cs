@@ -17,7 +17,7 @@ namespace excboards_api.Controllers;
 public class TagController(TagService tagService): ControllerBase
 {
     [HttpGet("search")]
-    public async Task<IActionResult> Search([AsParameters] SearchRequest request)
+    public async Task<IActionResult> Search([FromQuery] SearchRequest request)
     {
         var result = await tagService.Search(request.Query,  request.Page, request.PageSize);
         if(result.IsError)

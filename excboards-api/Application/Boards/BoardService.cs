@@ -134,9 +134,8 @@ public class BoardService(IBoardRepository boardRepository,
     {
         var board = await boardRepository.GetByIdAsync(boardId);
         
-        var permission = await SafeCheckEditPermissionAsync(userId, board);
-        if (permission.IsError)
-            return permission.Errors;
+        if (await permissionService.IsOwnerAsync(userId, boardId))
+            return Error.Forbidden("Board.Forbidden", "You do not have permission to delete this board.");
 
         await boardRepository.RemoveAsync(board);
 

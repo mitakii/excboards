@@ -8,9 +8,11 @@ public static class BoardCollaboratorResponseMapper
 {
     public static BoardCollaboratorResponse MapToResponse(this BoardCollaboratorDto dto) =>
         new (
-            dto.BoardId, 
-            dto.UserId, 
-            dto.CreatedAt, 
+            dto.BoardId,
+            dto.UserId,
+            dto.Username,
+            dto.ProfilePictureUrl,
+            dto.CreatedAt,
             Permission: dto.Permission.ToString());
     
     public static List<BoardCollaboratorResponse> MapToResponse(this List<BoardCollaboratorDto> dtos) => 

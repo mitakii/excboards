@@ -8,6 +8,7 @@ public static class UserBoardResponseMapper
     public static BoardResponse MapToResponse(this UserBoardDto dto) =>
         new BoardResponse(
             dto.Id,
+            dto.UserId,
             dto.Name,
             dto.Description,
             dto.IsPublished,

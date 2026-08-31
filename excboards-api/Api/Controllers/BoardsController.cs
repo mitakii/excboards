@@ -65,10 +65,10 @@ public class BoardsController
         return Ok(result.Value.MapToResponse());
     }
     
-    [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetById(Guid id)
+    [HttpGet("{boardId:guid}")]
+    public async Task<IActionResult> GetById(Guid boardId)
     {
-        var result = await boardService.GetByIdAsync(User.GetUserId(), id);
+        var result = await boardService.GetByIdAsync(User.GetUserId(), boardId);
         if (result.IsError)
             return result.ToProblem(this);
         
@@ -76,7 +76,7 @@ public class BoardsController
     }
 
     [HttpGet("search")]
-    public async Task<IActionResult> Search([AsParameters] SearchRequest request)
+    public async Task<IActionResult> Search([FromQuery] SearchRequest request)
     {
         var result = await boardService.SearchAsync(User.GetUserId(), request.Query, request.Page, request.PageSize);
         if(result.IsError)
@@ -89,22 +89,22 @@ public class BoardsController
             result.Value.PageSize));
     }
 
-    [HttpGet("{id:guid}/scene")]
-    public async Task<IActionResult> GetScene(Guid id)
+    [HttpGet("{boardId:guid}/scene")]
+    public async Task<IActionResult> GetScene(Guid boardId)
     {
-        var result = await boardService.GetSceneAsync(User.GetUserId(), id);
+        var result = await boardService.GetSceneAsync(User.GetUserId(), boardId);
         if (result.IsError)
             return result.ToProblem(this);
 
         return File(result.Value, "application/json");
     }
 
-    [HttpPut("{id:guid}/scene")]
-    public async Task<IActionResult> SaveScene(Guid id, [FromForm] SaveSceneRequest request)
+    [HttpPut("{boardId:guid}/scene")]
+    public async Task<IActionResult> SaveScene(Guid boardId, [FromForm] SaveSceneRequest request)
     {
         await using var stream = request.Scene.OpenReadStream();
 
-        var result = await boardService.SaveSceneAsync(User.GetUserId(), id, request.SceneHash, stream);
+        var result = await boardService.SaveSceneAsync(User.GetUserId(), boardId, request.SceneHash, stream);
         if (result.IsError)
             return result.ToProblem(this);
 
@@ -146,11 +146,11 @@ public class BoardsController
         return Ok(result.Value);
     }
 
-    [HttpPost("{id:guid}/collaborators")]
-    public async Task<IActionResult> AddCollaborator(Guid id, [FromBody] AddCollaboratorRequest request)
+    [HttpPost("{boardId:guid}/collaborators")]
+    public async Task<IActionResult> AddCollaborator(Guid boardId, [FromBody] AddCollaboratorRequest request)
     {
         var result = await boardCollaboratorService
-            .AddAsync(User.GetUserId(), id, request.UserId, request.Permission);
+            .AddAsync(User.GetUserId(), boardId, request.UserId, request.Permission);
         if (result.IsError)
             return result.ToProblem(this);
 
@@ -169,11 +169,11 @@ public class BoardsController
         return Ok();
     }
 
-    [HttpDelete("{id:guid}/collaborators/{userId:guid}")]
-    public async Task<IActionResult> RemoveCollaborator(Guid id, Guid userId)
+    [HttpDelete("{boardId:guid}/collaborators/{userId:guid}")]
+    public async Task<IActionResult> RemoveCollaborator(Guid boardId, Guid userId)
     {
         var result = await boardCollaboratorService
-            .RemoveAsync(User.GetUserId(), id, userId);
+            .RemoveAsync(User.GetUserId(), boardId, userId);
         if (result.IsError)
             return result.ToProblem(this);
 

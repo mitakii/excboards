@@ -36,7 +36,7 @@ public class UserController(IUserService userService) : ControllerBase
     }
 
     [HttpGet("search")]
-    public async Task<IActionResult> SearchUser([AsParameters] SearchRequest request)
+    public async Task<IActionResult> SearchUser([FromQuery] SearchRequest request)
     {
         var result = await userService.SearchAsync(request.Query, request.Page, request.PageSize);
         if(result.IsError)

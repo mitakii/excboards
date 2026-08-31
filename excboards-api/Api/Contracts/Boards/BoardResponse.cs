@@ -4,9 +4,10 @@ namespace excboards_api.Contracts.Boards;
 
 public sealed record BoardResponse(
     Guid Id,
+    Guid OwnerId,
     string Name,
     string? Description,
     bool IsPublished,
     DateTime Created,
-    DateTime Updated, 
+    DateTime Updated,
     List<TagResponse> Tags);
