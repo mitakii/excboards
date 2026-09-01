@@ -2,6 +2,8 @@ using System.Text;
 using Application.Storage;
 using excboards_api.Extensions;
 using excboards_api.Hubs;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -11,7 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
-builder.AddInfrastructure(); // DbContext + Identity + ITokenService + refresh-token cleanup job
+builder.AddInfrastructure(); // DbContext + Identity + ITokenService 
 
 var jwtSection = builder.Configuration.GetSection("JwtOptions");
 var jwtIssuer = jwtSection["Issuer"] ?? throw new InvalidOperationException("JwtOptions:Issuer is missing");
@@ -60,6 +62,10 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 builder.Services.AddSignalR();
+builder.Services.AddHangfire(config => 
+    config.UsePostgreSqlStorage(
+        builder.Configuration.GetConnectionString("DefaultConnection")));
+
 
 var app = builder.Build();
 
@@ -75,6 +81,9 @@ app.UseCors("ExcboardsFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+//todo: add auth
+app.MapHangfireDashboard("/hangfire");
 
 app.MapControllers();
 app.MapHub<CanvasHub>("/hubs/canvas");
