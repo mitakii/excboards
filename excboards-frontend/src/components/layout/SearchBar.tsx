@@ -23,7 +23,11 @@ export function SearchBar({
 
   return (
     <div className={cn("relative w-full", className)}>
-      <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+      <SearchIcon
+        className={cn(
+          "pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+        )}
+      />
       <Input
         type="search"
         value={query}
@@ -31,7 +35,7 @@ export function SearchBar({
         onChange={(e: ChangeEvent<HTMLInputElement>) =>
           setQuery(e.target.value)
         }
-        className="pl-8"
+        className={cn("pl-8")}
       />
     </div>
   );

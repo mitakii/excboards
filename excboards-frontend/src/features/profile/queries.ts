@@ -1,5 +1,6 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
-import { getRecentUsernames } from "@/lib/recentUsers";
+import { useSyncExternalStore } from "react";
+import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
+import { getRecentUsernames, subscribeRecentUsers } from "@/lib/recentUsers";
 import * as profileApi from "./api";
 
 export function useUserProfile(username: string | undefined) {
@@ -10,8 +11,18 @@ export function useUserProfile(username: string | undefined) {
   });
 }
 
+export function useSearchUsers(query: string) {
+  const trimmed = query.trim();
+  return useQuery({
+    queryKey: ["users", "search", trimmed],
+    queryFn: () => profileApi.searchUsers(trimmed),
+    enabled: trimmed.length > 0,
+    placeholderData: keepPreviousData,
+  });
+}
+
 export function useRecentUsers() {
-  const usernames = getRecentUsernames();
+  const usernames = useSyncExternalStore(subscribeRecentUsers, getRecentUsernames);
   const results = useQueries({
     queries: usernames.map((username) => ({
       queryKey: ["users", "username", username],

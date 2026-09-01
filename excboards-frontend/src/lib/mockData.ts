@@ -1,6 +1,6 @@
 // Placeholder data for features the backend doesn't support yet: public board
-// discovery, tag recommendations, recently-viewed tracking, other-user
-// profiles, and board collaborator lists. None of this hits the real API —
+// discovery, tag recommendations, recently-viewed tracking, and other-user
+// profiles. None of this hits the real API —
 // every function here is a pure, synchronous stand-in so it's a drop-in swap
 // once real endpoints exist.
 
@@ -23,17 +23,6 @@ export interface MockUserProfile {
   pfpUrl?: string;
   description: string;
 }
-
-export interface MockCollaborator {
-  userId: string;
-  username: string;
-  permission: "Viewer" | "Editor";
-}
-
-const MOCK_COLLABORATORS: MockCollaborator[] = [
-  { userId: "u1", username: "amelia-dev", permission: "Editor" },
-  { userId: "u2", username: "jorge.p", permission: "Viewer" },
-];
 
 const OWNERS: MockBoardOwner[] = [
   { username: "amelia-dev" },
@@ -58,8 +47,6 @@ const MOCK_BOARDS: MockBoard[] = [
   { id: "b12", name: "Competitor teardown", description: "Comparing three tools in our space", tags: ["research", "planning"], owner: OWNERS[2], updatedAt: "2026-07-08" },
 ];
 
-const RECENTLY_VIEWED_IDS = ["b3", "b5", "b8"];
-
 export function getAllTags(): string[] {
   return [...new Set(MOCK_BOARDS.flatMap((board) => board.tags))].sort();
 }
@@ -67,12 +54,6 @@ export function getAllTags(): string[] {
 export function getRecommendedBoards(tag?: string): MockBoard[] {
   if (!tag) return MOCK_BOARDS.slice(0, 6);
   return MOCK_BOARDS.filter((board) => board.tags.includes(tag));
-}
-
-export function getRecentlyViewedBoards(): MockBoard[] {
-  return RECENTLY_VIEWED_IDS.map((id) => MOCK_BOARDS.find((board) => board.id === id)).filter(
-    (board): board is MockBoard => board != null,
-  );
 }
 
 export function searchBoards(query: string, page: number, pageSize: number) {
@@ -98,10 +79,6 @@ export function getUserProfile(username: string): MockUserProfile {
     username,
     description: "Placeholder bio — user descriptions aren't stored by the backend yet.",
   };
-}
-
-export function getBoardCollaborators(_boardId: string): MockCollaborator[] {
-  return MOCK_COLLABORATORS;
 }
 
 export function getUserBoards(username: string, page: number, pageSize: number) {

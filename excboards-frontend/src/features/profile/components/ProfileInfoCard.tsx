@@ -9,16 +9,18 @@ export function ProfileInfoCard({ profile }: { profile: UserProfile }) {
   });
 
   return (
-    <Card className="lg:w-72 lg:shrink-0">
-      <CardContent className="flex flex-col items-center gap-3 text-center">
-        <Avatar size="lg" className="size-24">
+    <Card>
+      <CardContent className="flex items-center gap-4">
+        <Avatar size="lg" className="size-16 shrink-0">
           {profile.profilePictureUrl && <AvatarImage src={profile.profilePictureUrl} />}
-          <AvatarFallback className="text-2xl">
+          <AvatarFallback className="text-xl">
             {profile.username.slice(0, 2).toUpperCase()}
           </AvatarFallback>
         </Avatar>
-        <h1 className="text-lg font-semibold text-foreground">{profile.username}</h1>
-        <p className="text-sm text-muted-foreground">Joined {joined}</p>
+        <div className="min-w-0">
+          <h1 className="truncate text-lg font-semibold text-foreground">{profile.username}</h1>
+          <p className="text-sm text-muted-foreground">Joined {joined}</p>
+        </div>
       </CardContent>
     </Card>
   );

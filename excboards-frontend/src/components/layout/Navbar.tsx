@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { LogOutIcon, PanelLeftIcon, PenSquareIcon, UserIcon } from "lucide-react";
+import { LogOutIcon, PenSquareIcon, UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -10,16 +10,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useLogout, useStatus } from "@/features/auth/queries";
 import { BoardFormDialog } from "@/features/boards/components/BoardFormDialog";
-import { SearchBar } from "./SearchBar";
 
 export function Navbar({
-  sidebarOpen,
-  onToggleSidebar,
+  showSidebarTrigger = true,
 }: {
-  sidebarOpen: boolean;
-  onToggleSidebar: () => void;
+  showSidebarTrigger?: boolean;
 }) {
   const { data: user } = useStatus();
   const logout = useLogout();
@@ -30,22 +28,10 @@ export function Navbar({
     navigate("/");
   }
 
-  function handleSearch(query: string) {
-    if (!query) return;
-    navigate(`/search?q=${encodeURIComponent(query)}`);
-  }
-
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onToggleSidebar}
-          aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
-        >
-          <PanelLeftIcon />
-        </Button>
+      <div className="mx-auto flex items-center gap-4 px-4 py-3">
+        {showSidebarTrigger && <SidebarTrigger />}
 
         <Link
           to="/"
@@ -53,8 +39,6 @@ export function Navbar({
         >
           excboards
         </Link>
-
-        <SearchBar onSearch={handleSearch} className="max-w-md" />
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {user ? (

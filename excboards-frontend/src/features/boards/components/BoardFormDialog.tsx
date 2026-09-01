@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { getErrorMessage } from "@/lib/api";
+import { addRecentBoard } from "@/lib/recentBoards";
 import { useCreateBoard, useUpdateBoard } from "../queries";
 import { TagBadgeEditor } from "./TagBadgeEditor";
 
@@ -73,6 +74,7 @@ export function BoardFormDialog({ trigger, board }: BoardFormDialogProps) {
           description,
           scene,
         });
+        addRecentBoard(boardId);
         setOpen(false);
         navigate(`/boards/${boardId}`);
       }

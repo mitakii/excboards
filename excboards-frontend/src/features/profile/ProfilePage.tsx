@@ -18,10 +18,10 @@ export function ProfilePage() {
   const [page, setPage] = useState(1);
   const { data: currentUser } = useStatus();
   const profile = useUserProfile(username);
-  const boards = useUserBoards(profile.data?.id, page, PAGE_SIZE);
+  const boards = useUserBoards(profile.data?.userId, page, PAGE_SIZE);
   const deleteBoard = useDeleteBoard();
 
-  const isOwnProfile = currentUser?.userId === profile.data?.id;
+  const isOwnProfile = currentUser?.userId === profile.data?.userId;
 
   useEffect(() => {
     if (profile.data && !isOwnProfile) addRecentUser(profile.data.username);
@@ -49,19 +49,20 @@ export function ProfilePage() {
     id: board.id,
     name: board.name,
     description: board.description ?? "",
-    tags: [],
+    tags: board.tags.map((tag) => tag.name),
     owner: { username: profile.data.username, pfpUrl: profile.data.profilePictureUrl },
     updatedAt: new Date(board.updated).toLocaleDateString(),
   }));
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 lg:flex-row">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-8">
       <ProfileInfoCard profile={profile.data} />
 
-      <div className="min-w-0 flex-1 space-y-4">
+      <div className="min-w-0 space-y-4">
         <h2 className="text-lg font-semibold text-foreground">Boards</h2>
         <BoardList
           boards={items}
+          layout="list"
           emptyMessage="No boards yet."
           onDelete={isOwnProfile ? (id) => deleteBoard.mutate(id) : undefined}
         />

@@ -30,7 +30,7 @@ export function RecommendedByTagSection() {
           </Button>
         ))}
       </div>
-      <BoardList boards={boards} emptyMessage="No boards for this tag yet." />
+      <BoardList boards={boards} layout="list" emptyMessage="No boards for this tag yet." />
     </section>
   );
 }

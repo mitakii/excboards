@@ -5,14 +5,15 @@ import { createCanvasHubConnection } from "@/lib/signalr";
 
 export function useCanvasHub(
   boardId: string | undefined,
-  onElementsUpdated: (elements: OrderedExcalidrawElement[]) => void
+  onElementsUpdated: (elements: OrderedExcalidrawElement[]) => void,
+  enabled = true
 ) {
   const connectionRef = useRef<HubConnection | null>(null);
   const onElementsUpdatedRef = useRef(onElementsUpdated);
   onElementsUpdatedRef.current = onElementsUpdated;
 
   useEffect(() => {
-    if (!boardId) return;
+    if (!boardId || !enabled) return;
 
     const connection = createCanvasHubConnection();
     connectionRef.current = connection;
@@ -42,7 +43,7 @@ export function useCanvasHub(
           .finally(() => connection.stop());
       });
     };
-  }, [boardId]);
+  }, [boardId, enabled]);
 
   const broadcastElements = useCallback(
     (elements: OrderedExcalidrawElement[]) => {

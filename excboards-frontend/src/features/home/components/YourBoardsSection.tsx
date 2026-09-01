@@ -16,7 +16,7 @@ export function YourBoardsSection({ user }: { user: AuthUser }) {
     id: board.id,
     name: board.name,
     description: board.description ?? "",
-    tags: [],
+    tags: board.tags.map((tag) => tag.name),
     owner: { username: user.userName },
     updatedAt: new Date(board.updated).toLocaleDateString(),
   }));
@@ -26,6 +26,7 @@ export function YourBoardsSection({ user }: { user: AuthUser }) {
       <h2 className="text-lg font-semibold text-foreground">Your boards</h2>
       <BoardList
         boards={items}
+        layout="list"
         emptyMessage="You haven't created any boards yet."
         onDelete={(id) => deleteBoard.mutate(id)}
       />

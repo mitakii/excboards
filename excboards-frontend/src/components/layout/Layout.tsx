@@ -1,20 +1,23 @@
-import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Navbar } from "./Navbar";
 
+const NO_SIDEBAR_PATHS = ["/login", "/register"];
+
 export function Layout() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { pathname } = useLocation();
+  const showSidebar = !NO_SIDEBAR_PATHS.includes(pathname);
 
   return (
-    <div className="flex h-svh flex-col">
-      <Navbar sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen((open) => !open)} />
-      <div className="flex min-h-0 flex-1">
-        <AppSidebar open={sidebarOpen} />
+    <SidebarProvider defaultOpen={false}>
+      {showSidebar && <AppSidebar />}
+      <SidebarInset className="h-svh min-h-0 overflow-hidden">
+        <Navbar showSidebarTrigger={showSidebar} />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
           <Outlet />
         </div>
-      </div>
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

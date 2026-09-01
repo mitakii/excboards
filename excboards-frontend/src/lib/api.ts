@@ -86,6 +86,10 @@ export function getErrorMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
+export function getErrorStatus(err: unknown): number | undefined {
+  return axios.isAxiosError(err) ? err.response?.status : undefined;
+}
+
 export function getFieldErrors(err: unknown): Record<string, string> | null {
   if (!axios.isAxiosError(err)) return null;
 
