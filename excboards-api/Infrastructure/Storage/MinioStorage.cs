@@ -140,7 +140,10 @@ public class MinioStorage
         do
         {
             var response = await _client.ListObjectsV2Async(request);
-            result.AddRange(response.S3Objects.Select(o =>new StorageObjectInfo(o.Key, o.LastModified!.Value)));
+            if (response.S3Objects is not null)
+            {
+                result.AddRange(response.S3Objects.Select(o => new StorageObjectInfo(o.Key, o.LastModified!.Value)));
+            }
             request.ContinuationToken = response.NextContinuationToken;
         } while (!string.IsNullOrEmpty(request.ContinuationToken));
         

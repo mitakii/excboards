@@ -27,6 +27,16 @@ public class BoardsController
         return Created($"/api/boards/{result.Value}", result.Value);
     }
 
+    [HttpPatch("publish/{boardId:guid}")]
+    public async Task<IActionResult> PublishBoard(Guid boardId)
+    {
+        var result = await boardService.PublishBoardAsync(User.GetUserId(), boardId);
+        if (result.IsError)
+            return result.ToProblem(this);
+        
+        return Ok();
+    }
+
     [HttpPatch("{boardId:guid}")]
     public async Task<IActionResult> UpdateBoard(Guid boardId, [FromBody] BoardUpdateRequest request)
     {

@@ -93,19 +93,36 @@ public class BoardService(IBoardRepository boardRepository,
         var board = await boardRepository.GetByIdAsync(boardId);
         if (board == null)
             return Error.NotFound("Board.NotFound", "Board not found");
-        
+
         var permission = await SafeCheckEditPermissionAsync(userId, board);
         if (permission.IsError)
             return permission.Errors;
-
+        
         if (board.BoardHash == sceneHash)
             return Result.Updated;
-        
+
         await fileRepository.UploadFileAsync(BoardFileKeys.Scene(boardId), stream);
 
-        board!.Updated = DateTime.UtcNow;
+        board.BoardHash = sceneHash;
+        board.Updated = DateTime.UtcNow;
         await boardRepository.UpdateAsync(board);
 
+        return Result.Updated;
+    }
+
+    public async Task<ErrorOr<Updated>> PublishBoardAsync(Guid userId, Guid boardId)
+    {
+        var board = await boardRepository.GetByIdAsync(boardId);
+        if (board == null)
+            return  Error.NotFound("Board.NotFound", "Board not found");
+        
+        var permission = await SafeCheckEditPermissionAsync(userId, board);
+        if(permission.IsError)
+            return permission.Errors;
+
+        board.IsPublished = true;
+        
+        await boardRepository.UpdateAsync(board);
         return Result.Updated;
     }
     
@@ -134,7 +151,7 @@ public class BoardService(IBoardRepository boardRepository,
     {
         var board = await boardRepository.GetByIdAsync(boardId);
         
-        if (await permissionService.IsOwnerAsync(userId, boardId))
+        if (!await permissionService.IsOwnerAsync(userId, boardId))
             return Error.Forbidden("Board.Forbidden", "You do not have permission to delete this board.");
 
         await boardRepository.RemoveAsync(board);

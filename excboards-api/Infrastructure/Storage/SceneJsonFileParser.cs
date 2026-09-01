@@ -9,15 +9,15 @@ public static class SceneJsonFileParser
         var result = new HashSet<string>();
         var jsonDoc = await JsonDocument.ParseAsync(stream);
         
-        if(jsonDoc.RootElement
-               .TryGetProperty("elements", out var elements) 
+        if(!jsonDoc.RootElement
+               .TryGetProperty("elements", out var elements)
            || elements.ValueKind != JsonValueKind.Array)
             return result;
-        
-        
+
+
         foreach (var element in elements.EnumerateArray())
         {
-            if(!element.TryGetProperty("isDeleted", out var isDeleted) 
+            if(element.TryGetProperty("isDeleted", out var isDeleted)
                && isDeleted.ValueKind == JsonValueKind.True)
                 continue;
             
