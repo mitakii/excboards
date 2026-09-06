@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { InfoIcon, MoreVerticalIcon, Trash2Icon } from "lucide-react";
+import {
+  GlobeIcon,
+  InfoIcon,
+  LockIcon,
+  MoreVerticalIcon,
+  Trash2Icon,
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -19,6 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { BoardOverviewDialog } from "./BoardOverviewDialog";
 
 export interface BoardCardData {
@@ -28,6 +35,17 @@ export interface BoardCardData {
   tags: string[];
   owner?: { username: string; pfpUrl?: string };
   updatedAt: string;
+  isPublished: boolean;
+}
+
+function VisibilityIcon({ isPublished }: { isPublished: boolean }) {
+  const Icon = isPublished ? GlobeIcon : LockIcon;
+  return (
+    <Icon
+      aria-label={isPublished ? "Public board" : "Private board"}
+      className="size-3.5 shrink-0 text-muted-foreground"
+    />
+  );
 }
 
 function BoardRowMenu({
@@ -38,6 +56,7 @@ function BoardRowMenu({
   onDelete?: (id: string) => void;
 }) {
   const [overviewOpen, setOverviewOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   return (
     <>
@@ -65,7 +84,7 @@ function BoardRowMenu({
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
-                onSelect={() => onDelete(board.id)}
+                onSelect={() => setConfirmDeleteOpen(true)}
               >
                 <Trash2Icon />
                 Delete
@@ -79,6 +98,16 @@ function BoardRowMenu({
         open={overviewOpen}
         onOpenChange={setOverviewOpen}
       />
+      {onDelete && (
+        <ConfirmDialog
+          open={confirmDeleteOpen}
+          onOpenChange={setConfirmDeleteOpen}
+          title="Delete board?"
+          description={`"${board.name}" and its contents will be permanently deleted.`}
+          confirmLabel="Delete"
+          onConfirm={() => onDelete(board.id)}
+        />
+      )}
     </>
   );
 }
@@ -95,21 +124,37 @@ export function BoardCard({
   if (layout === "row") {
     return (
       <div className="relative flex items-start gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:bg-muted/50">
-        <Link to={`/boards/${board.id}`} className="min-w-0 flex-1">
-          <span className="block truncate text-base font-medium text-foreground">
-            {board.name}
+        {/* Stretched link — clicking anywhere on the card opens the board,
+            except the nested owner link / actions menu (z-10 above this). */}
+        <Link
+          to={`/boards/${board.id}`}
+          aria-label={board.name}
+          className="absolute inset-0 rounded-xl"
+        />
+
+        <div className="min-w-0 flex-1">
+          <span className="flex items-center gap-1.5">
+            <VisibilityIcon isPublished={board.isPublished} />
+            <span className="truncate text-base font-medium text-foreground">
+              {board.name}
+            </span>
           </span>
 
           {board.owner && (
-            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <Link
+              to={`/${board.owner.username}`}
+              className="relative z-10 mt-2 flex w-fit items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+            >
               <Avatar size="sm">
                 {board.owner.pfpUrl && <AvatarImage src={board.owner.pfpUrl} />}
                 <AvatarFallback>
                   {board.owner.username.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <span className="truncate">{board.owner.username}</span>
-            </div>
+              <span className="truncate hover:underline">
+                {board.owner.username}
+              </span>
+            </Link>
           )}
 
           {board.description && (
@@ -127,9 +172,11 @@ export function BoardCard({
               ))}
             </div>
           )}
-        </Link>
+        </div>
 
-        <BoardRowMenu board={board} onDelete={onDelete} />
+        <div className="relative z-10 shrink-0">
+          <BoardRowMenu board={board} onDelete={onDelete} />
+        </div>
       </div>
     );
   }
@@ -138,7 +185,10 @@ export function BoardCard({
     <Link to={`/boards/${board.id}`} className="relative block">
       <Card size="sm" className="h-full transition-colors hover:bg-muted/50">
         <CardHeader>
-          <CardTitle>{board.name}</CardTitle>
+          <CardTitle className="flex items-center gap-1.5">
+            <VisibilityIcon isPublished={board.isPublished} />
+            <span className="truncate">{board.name}</span>
+          </CardTitle>
           <CardDescription>{board.description}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
@@ -168,18 +218,25 @@ export function BoardCard({
         </CardContent>
       </Card>
       {onDelete && (
-        <Button
-          size="sm"
-          variant="destructive"
-          className="absolute top-2 right-2"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onDelete(board.id);
-          }}
-        >
-          Delete
-        </Button>
+        <ConfirmDialog
+          title="Delete board?"
+          description={`"${board.name}" and its contents will be permanently deleted.`}
+          confirmLabel="Delete"
+          onConfirm={() => onDelete(board.id)}
+          trigger={
+            <Button
+              size="sm"
+              variant="destructive"
+              className="absolute top-2 right-2"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            >
+              Delete
+            </Button>
+          }
+        />
       )}
     </Link>
   );

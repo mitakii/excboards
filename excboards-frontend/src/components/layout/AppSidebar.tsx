@@ -1,7 +1,10 @@
 import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
+import { ArrowLeftIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetDescription,
   SheetHeader,
@@ -38,7 +41,14 @@ export function AppSidebar() {
           <SheetTitle>Sidebar</SheetTitle>
           <SheetDescription>Recent boards and people.</SheetDescription>
         </SheetHeader>
-        <SidebarContent className="p-2">
+        <div className="flex justify-end px-2 pt-2">
+          <SheetClose asChild>
+            <Button variant="outline" size="icon-sm" aria-label="Close sidebar">
+              <ArrowLeftIcon />
+            </Button>
+          </SheetClose>
+        </div>
+        <SidebarContent className="p-2 pt-0">
           <GeneralSidebarContent />
         </SidebarContent>
       </SheetContent>

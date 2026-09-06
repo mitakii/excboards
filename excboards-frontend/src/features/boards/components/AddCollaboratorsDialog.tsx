@@ -10,37 +10,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { useStatus } from "@/features/auth/queries";
 import { useSearchUsers } from "@/features/profile/queries";
 import { getErrorMessage } from "@/lib/api";
-import { cn } from "@/lib/utils";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { PermissionLevel } from "../api";
-import {
-  useAddCollaborator,
-  useBoard,
-  useBoardCollaborators,
-} from "../queries";
-
-type GrantableLevel = {
-  value: number;
-  label: string;
-  hint: string;
-};
-
-const LEVELS: GrantableLevel[] = [
-  { value: PermissionLevel.Viewer, label: "Viewer", hint: "Can view the board" },
-  { value: PermissionLevel.Editor, label: "Editor", hint: "Can view and edit" },
-  {
-    value: PermissionLevel.Admin,
-    label: "Admin",
-    hint: "Can edit and manage collaborators",
-  },
-];
+import { useAddCollaborator, useBoardCollaborators } from "../queries";
 
 interface AddCollaboratorsDialogProps {
   boardId: string;
@@ -56,39 +34,20 @@ export function AddCollaboratorsDialog({
   const debouncedQuery = useDebouncedValue(query, 300);
 
   const { data: currentUser } = useStatus();
-  const board = useBoard(boardId);
   const collaborators = useBoardCollaborators(boardId);
   const search = useSearchUsers(debouncedQuery);
   const addCollaborator = useAddCollaborator(boardId);
 
   const [error, setError] = useState<string | null>(null);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
-  const [permission, setPermission] = useState<number>(PermissionLevel.Editor);
 
   useEffect(() => {
     if (!open) {
       setQuery("");
       setError(null);
       setPendingUserId(null);
-      setPermission(PermissionLevel.Editor);
     }
   }, [open]);
-
-  const isOwner = Boolean(
-    currentUser &&
-      board.data &&
-      currentUser.userId.toLowerCase() === board.data.ownerId.toLowerCase(),
-  );
-  const myPermission = (collaborators.data ?? []).find(
-    (c) => currentUser && c.userId.toLowerCase() === currentUser.userId.toLowerCase(),
-  )?.permission;
-  const isAdmin = isOwner || myPermission === "Admin";
-
-  // "view" / "edit" are grantable by an admin; "admin" by the owner or another
-  // admin. (Transferring ownership isn't supported by the API yet.)
-  const grantableLevels = LEVELS.filter(
-    (level) => level.value !== PermissionLevel.Admin || isAdmin,
-  );
 
   const collaboratorIds = new Set(
     (collaborators.data ?? []).map((c) => c.userId)
@@ -102,7 +61,11 @@ export function AddCollaboratorsDialog({
     setError(null);
     setPendingUserId(userId);
     try {
-      await addCollaborator.mutateAsync({ userId, permission });
+      // Always add with view access; owner/admin can promote in the overview.
+      await addCollaborator.mutateAsync({
+        userId,
+        permission: PermissionLevel.Viewer,
+      });
     } catch (err) {
       setError(getErrorMessage(err, "Failed to add collaborator."));
     } finally {
@@ -117,7 +80,7 @@ export function AddCollaboratorsDialog({
         <DialogHeader>
           <DialogTitle>Add users</DialogTitle>
           <DialogDescription>
-            Search for a user and add them as a collaborator on this board.
+            Added with view access — change it anytime from the board overview.
           </DialogDescription>
         </DialogHeader>
 
@@ -132,28 +95,6 @@ export function AddCollaboratorsDialog({
               autoFocus
             />
           </div>
-
-          <Field>
-            <FieldLabel htmlFor="add-collaborator-permission">
-              Permission
-            </FieldLabel>
-            <select
-              id="add-collaborator-permission"
-              value={permission}
-              onChange={(e) => setPermission(Number(e.target.value))}
-              className={cn(
-                "h-9 w-full rounded-md border border-input bg-transparent px-2.5 text-sm shadow-xs outline-none",
-                "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
-                "dark:bg-input/30",
-              )}
-            >
-              {grantableLevels.map((level) => (
-                <option key={level.value} value={level.value}>
-                  {level.label} — {level.hint}
-                </option>
-              ))}
-            </select>
-          </Field>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 

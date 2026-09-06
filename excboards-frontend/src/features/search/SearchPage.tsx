@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PagePagination } from "@/components/PagePagination";
 import { BoardList } from "@/features/boards/components/BoardList";
+import type { BoardCardData } from "@/features/boards/components/BoardCard";
 import { searchBoards } from "@/lib/mockData";
 
 const PAGE_SIZE = 6;
@@ -11,7 +12,11 @@ export function SearchPage() {
   const query = searchParams.get("q") ?? "";
   const [page, setPage] = useState(1);
 
-  const { items, total } = searchBoards(query, page, PAGE_SIZE);
+  const { items: rawItems, total } = searchBoards(query, page, PAGE_SIZE);
+  const items: BoardCardData[] = rawItems.map((board) => ({
+    ...board,
+    isPublished: true,
+  }));
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-4 px-4 py-8">

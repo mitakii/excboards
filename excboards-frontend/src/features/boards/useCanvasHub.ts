@@ -6,11 +6,14 @@ import { createCanvasHubConnection } from "@/lib/signalr";
 export function useCanvasHub(
   boardId: string | undefined,
   onElementsUpdated: (elements: OrderedExcalidrawElement[]) => void,
+  onSceneSaved: (sceneHash: number) => void,
   enabled = true
 ) {
   const connectionRef = useRef<HubConnection | null>(null);
   const onElementsUpdatedRef = useRef(onElementsUpdated);
   onElementsUpdatedRef.current = onElementsUpdated;
+  const onSceneSavedRef = useRef(onSceneSaved);
+  onSceneSavedRef.current = onSceneSaved;
 
   useEffect(() => {
     if (!boardId || !enabled) return;
@@ -20,6 +23,12 @@ export function useCanvasHub(
 
     connection.on("ElementsUpdated", (elements: OrderedExcalidrawElement[]) => {
       onElementsUpdatedRef.current(elements);
+    });
+
+    // A collaborator persisted the whole scene (e.g. loaded a file) — the socket
+    // just carries the hash; the receiver refetches the scene from storage.
+    connection.on("SceneSaved", (sceneHash: number) => {
+      onSceneSavedRef.current(sceneHash);
     });
 
     let cancelled = false;

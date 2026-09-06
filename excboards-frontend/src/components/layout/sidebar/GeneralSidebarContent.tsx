@@ -35,7 +35,7 @@ export function GeneralSidebarContent() {
           {recentBoards.length === 0 ? (
             <EmptyHint>No recently opened boards yet.</EmptyHint>
           ) : (
-            <SidebarMenu>
+            <SidebarMenu className="gap-1">
               {recentBoards.map((board) => (
                 <SidebarBoardTile
                   key={board.id}
@@ -55,7 +55,7 @@ export function GeneralSidebarContent() {
             {(myBoards.data ?? []).length === 0 ? (
               <EmptyHint>You haven't created any boards yet.</EmptyHint>
             ) : (
-              <SidebarMenu>
+              <SidebarMenu className="gap-1">
                 {(myBoards.data ?? []).map((board) => (
                   <SidebarBoardTile
                     key={board.id}

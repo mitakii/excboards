@@ -88,7 +88,6 @@ export async function getDownloadUrls(boardId: string, fileIds: string[]) {
   return res.data;
 }
 
-// todo:backend
 export async function updateBoard(
   id: string,
   data: { name: string; description: string; tags: string[] }
@@ -106,9 +105,22 @@ export async function getBoardCollaborators(boardId: string) {
 export async function addCollaborator(
   boardId: string,
   userId: string,
-  permission: number = PermissionLevel.Editor
+  permission: number = PermissionLevel.Viewer
 ) {
-  await api.post(`/api/boards/${boardId}/collaborators`, { userId, permission });
+  await api.post(`/api/boards/${boardId}/collaborators`, {
+    userId,
+    permission,
+  });
+}
+
+export async function updateCollaborator(
+  boardId: string,
+  userId: string,
+  permission: number
+) {
+  await api.put(`/api/boards/${boardId}/collaborators/${userId}`, {
+    permission,
+  });
 }
 
 export async function removeCollaborator(boardId: string, userId: string) {

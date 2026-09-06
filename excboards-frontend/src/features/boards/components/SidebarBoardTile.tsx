@@ -13,7 +13,7 @@ export function SidebarBoardTile({ id, name }: { id: string; name: string }) {
 
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton asChild>
+      <SidebarMenuButton asChild variant="outline">
         <Link to={`/boards/${id}`}>
           <span className="truncate">{name}</span>
         </Link>
@@ -22,6 +22,7 @@ export function SidebarBoardTile({ id, name }: { id: string; name: string }) {
         showOnHover
         onClick={() => setOverviewOpen(true)}
         aria-label={`Overview of ${name}`}
+        className="border border-sidebar-border bg-background"
       >
         <InfoIcon />
       </SidebarMenuAction>

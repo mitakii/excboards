@@ -19,6 +19,7 @@ export function YourBoardsSection({ user }: { user: AuthUser }) {
     tags: board.tags.map((tag) => tag.name),
     owner: { username: user.userName },
     updatedAt: new Date(board.updated).toLocaleDateString(),
+    isPublished: board.isPublished,
   }));
 
   return (

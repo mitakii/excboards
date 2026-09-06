@@ -19,10 +19,10 @@ export function RecentUsersList() {
   }
 
   return (
-    <SidebarMenu>
+    <SidebarMenu className="gap-1">
       {users.map((user) => (
         <SidebarMenuItem key={user.userId}>
-          <SidebarMenuButton asChild>
+          <SidebarMenuButton asChild variant="outline">
             <Link to={`/${user.username}`}>
               <Avatar size="sm">
                 <AvatarFallback>

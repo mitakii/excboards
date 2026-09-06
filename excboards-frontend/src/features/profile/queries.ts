@@ -11,6 +11,35 @@ export function useUserProfile(username: string | undefined) {
   });
 }
 
+export function useUserById(id: string | undefined) {
+  return useQuery({
+    queryKey: ["users", "id", id],
+    queryFn: () => profileApi.getUserById(id!),
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/** Resolve many user ids at once (deduped); returns a map keyed by id. */
+export function useUsersByIds(ids: string[]) {
+  const unique = [...new Set(ids)];
+  const results = useQueries({
+    queries: unique.map((id) => ({
+      queryKey: ["users", "id", id],
+      queryFn: () => profileApi.getUserById(id),
+      retry: false,
+      staleTime: 5 * 60 * 1000,
+    })),
+  });
+
+  const byId: Record<string, profileApi.UserProfile> = {};
+  unique.forEach((id, i) => {
+    const data = results[i]?.data;
+    if (data) byId[id] = data;
+  });
+  return byId;
+}
+
 export function useSearchUsers(query: string) {
   const trimmed = query.trim();
   return useQuery({

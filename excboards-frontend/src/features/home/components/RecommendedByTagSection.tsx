@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { BoardList } from "@/features/boards/components/BoardList";
+import type { BoardCardData } from "@/features/boards/components/BoardCard";
 import { getAllTags, getRecommendedBoards } from "@/lib/mockData";
 
 export function RecommendedByTagSection() {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const tags = getAllTags();
-  const boards = getRecommendedBoards(activeTag ?? undefined);
+  const boards: BoardCardData[] = getRecommendedBoards(
+    activeTag ?? undefined,
+  ).map((board) => ({ ...board, isPublished: true }));
 
   return (
     <section className="space-y-3">

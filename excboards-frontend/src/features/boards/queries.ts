@@ -141,6 +141,23 @@ export function useAddCollaborator(boardId: string) {
   });
 }
 
+export function useUpdateCollaborator(boardId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      userId,
+      permission,
+    }: {
+      userId: string;
+      permission: number;
+    }) => boardsApi.updateCollaborator(boardId, userId, permission),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: ["boards", boardId, "collaborators"],
+      }),
+  });
+}
+
 export function useRemoveCollaborator(boardId: string) {
   const queryClient = useQueryClient();
   return useMutation({

@@ -13,6 +13,11 @@ export async function getUserByUsername(username: string) {
   return res.data;
 }
 
+export async function getUserById(id: string) {
+  const res = await api.get<UserProfile>(`/api/User/${id}`);
+  return res.data;
+}
+
 export interface UserSearchResult {
   userId: string;
   username: string;

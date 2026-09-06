@@ -52,6 +52,7 @@ export function ProfilePage() {
     tags: board.tags.map((tag) => tag.name),
     owner: { username: profile.data.username, pfpUrl: profile.data.profilePictureUrl },
     updatedAt: new Date(board.updated).toLocaleDateString(),
+    isPublished: board.isPublished,
   }));
 
   return (

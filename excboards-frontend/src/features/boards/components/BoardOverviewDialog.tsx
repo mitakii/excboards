@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   GlobeIcon,
   LockIcon,
@@ -11,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -23,16 +25,21 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useStatus } from "@/features/auth/queries";
+import { useUserById } from "@/features/profile/queries";
 import { getErrorMessage } from "@/lib/api";
+import { PermissionLevel } from "../api";
 import {
   useBoard,
   useBoardCollaborators,
   usePublishBoard,
   useRemoveCollaborator,
   useUpdateBoard,
+  useUpdateCollaborator,
 } from "../queries";
 import { AddCollaboratorsDialog } from "./AddCollaboratorsDialog";
+import { PERMISSION_NAME_TO_LEVEL, PermissionSelect } from "./PermissionSelect";
 import { TagBadgeEditor } from "./TagBadgeEditor";
 
 interface BoardOverviewDialogProps {
@@ -55,8 +62,7 @@ export function BoardOverviewDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setOpen}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      {/* ~1/3 of the viewport width, centered (the default Dialog position). */}
-      <DialogContent className="max-h-[85vh] w-[92vw] overflow-y-auto sm:w-[34vw] sm:min-w-[420px] sm:max-w-none">
+      <DialogContent className="max-h-[85vh] w-[640px] max-w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-[calc(100vw-2rem)]">
         {isOpen && <BoardOverviewContent boardId={boardId} />}
       </DialogContent>
     </Dialog>
@@ -66,10 +72,12 @@ export function BoardOverviewDialog({
 function BoardOverviewContent({ boardId }: { boardId: string }) {
   const board = useBoard(boardId);
   const { data: user } = useStatus();
+  const owner = useUserById(board.data?.ownerId);
   const collaboratorsQuery = useBoardCollaborators(boardId);
   const updateBoard = useUpdateBoard();
   const publishBoard = usePublishBoard();
   const removeCollaborator = useRemoveCollaborator(boardId);
+  const updateCollaborator = useUpdateCollaborator(boardId);
 
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
@@ -205,22 +213,42 @@ function BoardOverviewContent({ boardId }: { boardId: string }) {
       </DialogHeader>
 
       <div className="space-y-4">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            Author
+          </span>
+          {owner.data ? (
+            <DialogClose asChild>
+              <Link
+                to={`/${owner.data.username}`}
+                className="flex items-center gap-2 rounded-md px-1 py-0.5 hover:bg-accent"
+              >
+                <Avatar size="sm">
+                  {owner.data.profilePictureUrl && (
+                    <AvatarImage
+                      src={owner.data.profilePictureUrl}
+                      alt={owner.data.username}
+                    />
+                  )}
+                  <AvatarFallback>
+                    {owner.data.username.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-foreground">{owner.data.username}</span>
+              </Link>
+            </DialogClose>
+          ) : (
+            <span className="text-muted-foreground">
+              {owner.isLoading ? "…" : "Unknown"}
+            </span>
+          )}
+        </div>
+
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={data.isPublished ? "default" : "outline"}>
             {data.isPublished ? <GlobeIcon /> : <LockIcon />}
             {data.isPublished ? "Published" : "Private"}
           </Badge>
-          {canEdit && !data.isPublished && (
-            <Button
-              size="xs"
-              variant="outline"
-              onClick={handlePublish}
-              disabled={publishBoard.isPending}
-            >
-              {publishBoard.isPending && <Spinner />}
-              Publish
-            </Button>
-          )}
         </div>
 
         {error && <p className="text-sm text-destructive">{error}</p>}
@@ -275,39 +303,89 @@ function BoardOverviewContent({ boardId }: { boardId: string }) {
                     key={collaborator.userId}
                     className="flex items-center gap-2 py-1 text-sm"
                   >
-                    <Avatar size="sm">
-                      {collaborator.profilePictureUrl && (
-                        <AvatarImage
-                          src={collaborator.profilePictureUrl}
-                          alt={collaborator.username}
-                        />
-                      )}
-                      <AvatarFallback>
-                        {(collaborator.username || "?")
-                          .slice(0, 2)
-                          .toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="flex-1 truncate text-foreground">
-                      {collaborator.username || "Unknown user"}
-                    </span>
-                    <Badge variant="secondary">{collaborator.permission}</Badge>
-                    {canManageCollaborators && (
-                      <Button
-                        size="icon-xs"
-                        variant="ghost"
-                        className="shrink-0 text-muted-foreground"
-                        disabled={
-                          removeCollaborator.isPending &&
-                          removeCollaborator.variables === collaborator.userId
+                    {collaborator.username ? (
+                      <DialogClose asChild>
+                        <Link
+                          to={`/${collaborator.username}`}
+                          className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-0.5 hover:bg-accent"
+                        >
+                          <Avatar size="sm">
+                            {collaborator.profilePictureUrl && (
+                              <AvatarImage
+                                src={collaborator.profilePictureUrl}
+                                alt={collaborator.username}
+                              />
+                            )}
+                            <AvatarFallback>
+                              {collaborator.username.slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="truncate text-foreground">
+                            {collaborator.username}
+                          </span>
+                        </Link>
+                      </DialogClose>
+                    ) : (
+                      <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
+                        <Avatar size="sm">
+                          <AvatarFallback>?</AvatarFallback>
+                        </Avatar>
+                        <span className="truncate text-muted-foreground">
+                          Unknown user
+                        </span>
+                      </div>
+                    )}
+                    {canManageCollaborators ? (
+                      <PermissionSelect
+                        aria-label={`Permission for ${collaborator.username}`}
+                        className="shrink-0"
+                        value={
+                          PERMISSION_NAME_TO_LEVEL[collaborator.permission] ??
+                          PermissionLevel.Viewer
                         }
-                        onClick={() =>
+                        disabled={
+                          updateCollaborator.isPending &&
+                          updateCollaborator.variables?.userId ===
+                            collaborator.userId
+                        }
+                        onChange={(permission) =>
+                          updateCollaborator.mutate({
+                            userId: collaborator.userId,
+                            permission,
+                          })
+                        }
+                      />
+                    ) : (
+                      <Badge variant="secondary">
+                        {collaborator.permission}
+                      </Badge>
+                    )}
+                    {canManageCollaborators && (
+                      <ConfirmDialog
+                        title="Remove collaborator?"
+                        description={`${
+                          collaborator.username || "This user"
+                        } will lose access to this board.`}
+                        confirmLabel="Remove"
+                        onConfirm={() =>
                           removeCollaborator.mutate(collaborator.userId)
                         }
-                        aria-label={`Remove ${collaborator.username}`}
-                      >
-                        <XIcon />
-                      </Button>
+                        trigger={
+                          <Button
+                            size="icon-xs"
+                            variant="ghost"
+                            className="shrink-0 text-muted-foreground"
+                            disabled={
+                              removeCollaborator.isPending &&
+                              removeCollaborator.variables ===
+                                collaborator.userId
+                            }
+                            aria-label={`Remove ${collaborator.username}`}
+                          >
+                            <XIcon />
+                          </Button>
+                        }
+                      />
                     )}
                   </div>
                 ))}
@@ -318,7 +396,27 @@ function BoardOverviewContent({ boardId }: { boardId: string }) {
       </div>
 
       {canEdit && (
-        <DialogFooter>
+        <DialogFooter className="sm:justify-between">
+          {!data.isPublished ? (
+            <ConfirmDialog
+              title="Publish this board?"
+              description="Anyone will be able to find and view it. Publishing can't be undone."
+              confirmLabel="Publish"
+              confirmVariant="default"
+              onConfirm={handlePublish}
+              trigger={
+                <Button
+                  disabled={publishBoard.isPending}
+                  className="bg-green-600 text-white hover:bg-green-500 focus-visible:ring-green-600/30"
+                >
+                  {publishBoard.isPending ? <Spinner /> : <GlobeIcon />}
+                  Publish
+                </Button>
+              }
+            />
+          ) : (
+            <span aria-hidden />
+          )}
           <Button variant="outline" onClick={startEditing}>
             <PencilIcon />
             Edit board
