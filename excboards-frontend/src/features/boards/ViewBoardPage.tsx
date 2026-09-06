@@ -22,6 +22,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { getErrorMessage, getErrorStatus } from "@/lib/api";
 import { addRecentBoard } from "@/lib/recentBoards";
 import { useStatus } from "@/features/auth/queries";
+import { getBoardScene } from "./api";
 import {
   getReferencedFileIds,
   hydrateBoardFiles,
@@ -34,9 +35,11 @@ import {
   useSaveScene,
 } from "./queries";
 import { BoardOverviewDialog } from "./components/BoardOverviewDialog";
+import { ExcalidrawMiscToolPortal } from "./components/ExcalidrawMiscToolPortal";
 import { useCanvasHub } from "./useCanvasHub";
 
-const SAVE_DEBOUNCE_MS = 3000;
+const SAVE_DEBOUNCE_MS =
+  Number(import.meta.env.VITE_SAVE_DEBOUNCE_MS) || 3000;
 
 interface SceneSnapshot {
   elements: readonly OrderedExcalidrawElement[];
@@ -51,12 +54,13 @@ function buildScene(scene: SceneSnapshot) {
     scene.files,
     "database"
   );
+  const data = JSON.parse(json);
   return {
-    data: JSON.parse(json),
+    data,
     blob: new Blob([json], { type: "application/json" }),
-    // Excalidraw's own scene-version hash — the backend stores this to skip
-    // no-op writes.
-    hash: hashElementsVersion(scene.elements),
+    // Hash of the persisted (non-deleted) elements — the backend stores this to
+    // skip no-op writes and echoes it in `SceneSaved`.
+    hash: hashElementsVersion(data.elements ?? []) as number,
   };
 }
 
@@ -105,6 +109,9 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
   const knownFileIdsRef = useRef(new Set<string>());
   const applyingRemoteUpdateRef = useRef(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Hashes this client pushed, so its own `SceneSaved` echoes don't trigger a
+  // self-refetch (which would clobber edits made since the save fired).
+  const ownSavedHashesRef = useRef(new Set<number>());
 
   const latestSceneRef = useRef<SceneSnapshot | null>(null);
 
@@ -144,9 +151,63 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
     [boardId]
   );
 
+  // A peer persisted the whole scene (typically after loading an .excalidraw
+  // file). The socket only carried the hash — pull the scene from storage and
+  // replace ours, since incremental reconcile can't represent a scene that
+  // shrank.
+  const onSceneSaved = useCallback(
+    async (sceneHash: number) => {
+      const excalidrawApi = excalidrawApiRef.current;
+      if (!excalidrawApi) return;
+
+      // Our own save echoing back.
+      if (ownSavedHashesRef.current.delete(sceneHash)) return;
+
+      // Peer edits already reached us incrementally.
+      if (hashElementsVersion(excalidrawApi.getSceneElements()) === sceneHash) {
+        return;
+      }
+
+      let fresh;
+      try {
+        fresh = await getBoardScene(boardId);
+      } catch (err) {
+        console.error("Failed to refetch board scene", err);
+        return;
+      }
+
+      const elements = (fresh.elements ?? []) as OrderedExcalidrawElement[];
+      queryClient.setQueryData(["boards", boardId, "scene"], fresh);
+
+      elementVersionsRef.current = new Map(
+        elements.map((el) => [el.id, el.version])
+      );
+
+      applyingRemoteUpdateRef.current = true;
+      excalidrawApi.updateScene({
+        elements,
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+
+      const missingFileIds = getReferencedFileIds(elements).filter(
+        (id) => !knownFileIdsRef.current.has(id)
+      );
+      if (missingFileIds.length > 0) {
+        for (const id of missingFileIds) knownFileIdsRef.current.add(id);
+        hydrateBoardFiles(boardId, missingFileIds, excalidrawApi).catch(
+          (err) => {
+            console.error("Failed to load board files", err);
+          }
+        );
+      }
+    },
+    [boardId, queryClient]
+  );
+
   const { broadcastElements } = useCanvasHub(
     boardId,
     onElementsUpdated,
+    onSceneSaved,
     realtimeEnabled
   );
 
@@ -154,29 +215,36 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
     if (board.data) addRecentBoard(board.data.id);
   }, [board.data]);
 
+  const performSave = useCallback(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    const snapshot = latestSceneRef.current;
+    if (!snapshot) return;
+
+    if (cannotEditRef.current) {
+      setEditBlocked(true);
+      return;
+    }
+    const { data, blob, hash } = buildScene(snapshot);
+
+    ownSavedHashesRef.current.add(hash);
+    queryClient.setQueryData(["boards", boardId, "scene"], data);
+    saveScene.mutate(
+      { id: boardId, scene: blob, sceneHash: hash },
+      {
+        onError: (err) => {
+          if (getErrorStatus(err) === 403) setEditBlocked(true);
+        },
+      }
+    );
+  }, [boardId, saveScene, queryClient]);
+
   const scheduleSave = useCallback(() => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => {
-      const scene = latestSceneRef.current;
-      if (!scene) return;
-
-      if (cannotEditRef.current) {
-        setEditBlocked(true);
-        return;
-      }
-      const { data, blob, hash } = buildScene(scene);
-
-      queryClient.setQueryData(["boards", boardId, "scene"], data);
-      saveScene.mutate(
-        { id: boardId, scene: blob, sceneHash: hash },
-        {
-          onError: (err) => {
-            if (getErrorStatus(err) === 403) setEditBlocked(true);
-          },
-        }
-      );
-    }, SAVE_DEBOUNCE_MS);
-  }, [boardId, saveScene, queryClient]);
+    saveTimeoutRef.current = setTimeout(performSave, SAVE_DEBOUNCE_MS);
+  }, [performSave]);
 
   function handleChange(
     elements: readonly OrderedExcalidrawElement[],
@@ -197,12 +265,22 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
       for (const el of changed)
         elementVersionsRef.current.set(el.id, el.version);
 
+      // A wholesale scene swap (loading an .excalidraw file via "Open", pasting
+      // a big selection) touches every element at once — persist it straight
+      // away instead of risking the tab closing before the 3s debounce fires.
+      const isBulkChange =
+        elements.length >= 2 && changed.length === elements.length;
+
       if (cannotEditRef.current) {
         // Local-only edit — warn the user it won't be persisted or shared.
         setEditBlocked(true);
       } else {
         broadcastElements(changed);
-        scheduleSave();
+        if (isBulkChange) {
+          performSave();
+        } else {
+          scheduleSave();
+        }
       }
     }
 
@@ -218,9 +296,9 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
 
   useEffect(() => {
     function saveOnLeave() {
-      const scene = latestSceneRef.current;
-      if (!scene || cannotEditRef.current) return;
-      const { data, blob, hash } = buildScene(scene);
+      const snapshot = latestSceneRef.current;
+      if (!snapshot || cannotEditRef.current) return;
+      const { data, blob, hash } = buildScene(snapshot);
       queryClient.setQueryData(["boards", boardId, "scene"], data);
 
       const form = new FormData();
@@ -279,8 +357,9 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
         >
           <TriangleAlertIcon className="mt-0.5 size-4 shrink-0" />
           <span>
-            You don&apos;t have permission to edit this board. Your changes
-            won&apos;t be saved and will be discarded when the board reloads.
+            {
+              "You don't have permission to edit this board. Your changes won't be saved and will be discarded when the board reloads."
+            }
           </span>
           <button
             type="button"
@@ -293,17 +372,42 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
         </div>
       )}
 
+      <ExcalidrawMiscToolPortal>
+        <button
+          type="button"
+          className="ToolIcon__icon transition-colors hover:bg-[var(--island-bg-color)]"
+          onClick={() => setOverviewOpen(true)}
+          title="Board overview"
+          aria-label="Board overview"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            border: "none",
+            background: "transparent",
+            cursor: "pointer",
+            color: "var(--icon-fill-color)",
+          }}
+        >
+          <InfoIcon style={{ width: "1.25rem", height: "1.25rem" }} />
+        </button>
+      </ExcalidrawMiscToolPortal>
+
       <Excalidraw
-        renderTopRightUI={() => (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setOverviewOpen(true)}
-          >
-            <InfoIcon />
-            Overview
-          </Button>
-        )}
+        renderTopRightUI={(isMobile) =>
+          isMobile ? null : (
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setOverviewOpen(true)}
+              title="Board overview"
+              className="[&_svg:not([class*='size-'])]:size-5"
+            >
+              <InfoIcon />
+              Overview
+            </Button>
+          )
+        }
         excalidrawAPI={(excalidrawApi) => {
           excalidrawApiRef.current = excalidrawApi;
 
