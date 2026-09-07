@@ -88,7 +88,7 @@ public class BoardService(IBoardRepository boardRepository,
         return await fileRepository.GetFileAsync(BoardFileKeys.Scene(boardId));
     }
 
-    public async Task<ErrorOr<Updated>> SaveSceneAsync(Guid userId, Guid boardId, long sceneHash, Stream stream)
+    public async Task<ErrorOr<long?>> SaveSceneAsync(Guid userId, Guid boardId, long sceneHash, Stream stream)
     {
         var board = await boardRepository.GetByIdAsync(boardId);
         if (board == null)
@@ -99,7 +99,7 @@ public class BoardService(IBoardRepository boardRepository,
             return permission.Errors;
         
         if (board.BoardHash == sceneHash)
-            return Result.Updated;
+            return (long?)null;
 
         await fileRepository.UploadFileAsync(BoardFileKeys.Scene(boardId), stream);
 
@@ -107,7 +107,7 @@ public class BoardService(IBoardRepository boardRepository,
         board.Updated = DateTime.UtcNow;
         await boardRepository.UpdateAsync(board);
 
-        return Result.Updated;
+        return board.BoardHash;
     }
 
     public async Task<ErrorOr<Updated>> PublishBoardAsync(Guid userId, Guid boardId)

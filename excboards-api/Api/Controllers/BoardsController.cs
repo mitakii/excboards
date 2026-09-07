@@ -2,9 +2,11 @@ using Application.Boards;
 using Application.Dto;
 using excboards_api.Contracts.Boards;
 using excboards_api.Extensions;
+using excboards_api.Hubs;
 using excboards_api.Mappers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 
 namespace excboards_api.Controllers;
 
@@ -12,7 +14,8 @@ namespace excboards_api.Controllers;
 [Route("api/[controller]")]
 [Authorize]
 public class BoardsController
-    (BoardService boardService, BoardCollaboratorService boardCollaboratorService) : ControllerBase
+    (BoardService boardService, BoardCollaboratorService boardCollaboratorService, IHubContext<CanvasHub> hubContext, 
+        ILogger<BoardsController> logger) : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> Create([FromForm] CreateBoardRequest request)
@@ -118,6 +121,19 @@ public class BoardsController
         if (result.IsError)
             return result.ToProblem(this);
 
+        if (result.Value is { } hash)
+        {
+            try
+            {
+                await hubContext.Clients.Group(boardId.ToString())
+                    .SendAsync("SceneSaved", hash, request.Kind.ToString());
+            }
+            catch (Exception e)
+            {
+                logger.LogWarning(e, "Scene saved but notify failed for board {boardId}", boardId);
+            }
+        }
+        
         return Ok();
     }
 
