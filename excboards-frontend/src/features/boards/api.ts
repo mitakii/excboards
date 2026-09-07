@@ -58,10 +58,19 @@ export async function getBoardScene(id: string) {
   return res.data as unknown as ExcalidrawInitialDataState;
 }
 
-export async function saveScene(id: string, scene: Blob, sceneHash: number) {
+/** Mirrors backend Contracts.Boards.SceneSaveKind. */
+export type SceneSaveKind = "Incremental" | "Replace";
+
+export async function saveScene(
+  id: string,
+  scene: Blob,
+  sceneHash: number,
+  kind: SceneSaveKind = "Incremental"
+) {
   const form = new FormData();
   form.append("Scene", scene, "scene.json");
   form.append("SceneHash", String(sceneHash));
+  form.append("Kind", kind);
   await api.put(`/api/boards/${id}/scene`, form);
 }
 

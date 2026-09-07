@@ -3,10 +3,13 @@ import { HubConnectionState, type HubConnection } from "@microsoft/signalr";
 import type { OrderedExcalidrawElement } from "@excalidraw/excalidraw/element/types";
 import { createCanvasHubConnection } from "@/lib/signalr";
 
+const BROADCAST_MAX_BYTES = 28_000;
+const encoder = new TextEncoder();
+
 export function useCanvasHub(
   boardId: string | undefined,
   onElementsUpdated: (elements: OrderedExcalidrawElement[]) => void,
-  onSceneSaved: (sceneHash: number) => void,
+  onSceneSaved: (sceneHash: number, kind: string) => void,
   enabled = true
 ) {
   const connectionRef = useRef<HubConnection | null>(null);
@@ -27,8 +30,8 @@ export function useCanvasHub(
 
     // A collaborator persisted the whole scene (e.g. loaded a file) — the socket
     // just carries the hash; the receiver refetches the scene from storage.
-    connection.on("SceneSaved", (sceneHash: number) => {
-      onSceneSavedRef.current(sceneHash);
+    connection.on("SceneSaved", (sceneHash: number, kind: string) => {
+      onSceneSavedRef.current(sceneHash, kind);
     });
 
     let cancelled = false;
@@ -63,6 +66,15 @@ export function useCanvasHub(
         connection.state !== HubConnectionState.Connected
       )
         return;
+
+      // Oversized frame would kill the connection — skip it. The caller's
+      // debounced scene save + the SceneSaved signal bring peers back in sync.
+      if (
+        encoder.encode(JSON.stringify(elements)).length > BROADCAST_MAX_BYTES
+      ) {
+        console.warn("Skipping oversized element broadcast");
+        return;
+      }
 
       connection.invoke("BroadcastElements", boardId, elements).catch((err) => {
         console.error("Failed to broadcast elements", err);

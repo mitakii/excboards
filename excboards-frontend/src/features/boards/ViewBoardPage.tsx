@@ -22,7 +22,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { getErrorMessage, getErrorStatus } from "@/lib/api";
 import { addRecentBoard } from "@/lib/recentBoards";
 import { useStatus } from "@/features/auth/queries";
-import { getBoardScene } from "./api";
+import { getBoardScene, type SceneSaveKind } from "./api";
 import {
   getReferencedFileIds,
   hydrateBoardFiles,
@@ -38,8 +38,7 @@ import { BoardOverviewDialog } from "./components/BoardOverviewDialog";
 import { ExcalidrawMiscToolPortal } from "./components/ExcalidrawMiscToolPortal";
 import { useCanvasHub } from "./useCanvasHub";
 
-const SAVE_DEBOUNCE_MS =
-  Number(import.meta.env.VITE_SAVE_DEBOUNCE_MS) || 3000;
+const SAVE_DEBOUNCE_MS = 3000;
 
 interface SceneSnapshot {
   elements: readonly OrderedExcalidrawElement[];
@@ -58,8 +57,6 @@ function buildScene(scene: SceneSnapshot) {
   return {
     data,
     blob: new Blob([json], { type: "application/json" }),
-    // Hash of the persisted (non-deleted) elements — the backend stores this to
-    // skip no-op writes and echoes it in `SceneSaved`.
     hash: hashElementsVersion(data.elements ?? []) as number,
   };
 }
@@ -105,15 +102,55 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
 
   const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null);
   const elementVersionsRef = useRef(new Map<string, number>());
+  // Ids of the non-deleted elements seen in the last onChange — used to tell a
+  // whole-scene swap (open .excalidraw file: every id is new) apart from a
+  // select-all edit (same ids, bumped versions).
+  const liveElementIdsRef = useRef(new Set<string>());
 
   const knownFileIdsRef = useRef(new Set<string>());
-  const applyingRemoteUpdateRef = useRef(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Hashes this client pushed, so its own `SceneSaved` echoes don't trigger a
   // self-refetch (which would clobber edits made since the save fired).
   const ownSavedHashesRef = useRef(new Set<number>());
 
   const latestSceneRef = useRef<SceneSnapshot | null>(null);
+
+  const performSave = useCallback(
+    (kind: SceneSaveKind = "Incremental") => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      const snapshot = latestSceneRef.current;
+      if (!snapshot) return;
+
+      if (cannotEditRef.current) {
+        setEditBlocked(true);
+        return;
+      }
+      const { data, blob, hash } = buildScene(snapshot);
+
+      ownSavedHashesRef.current.add(hash);
+      queryClient.setQueryData(["boards", boardId, "scene"], data);
+      saveScene.mutate(
+        { id: boardId, scene: blob, sceneHash: hash, kind },
+        {
+          onError: (err) => {
+            if (getErrorStatus(err) === 403) setEditBlocked(true);
+          },
+        }
+      );
+    },
+    [boardId, saveScene, queryClient]
+  );
+
+  const scheduleSave = useCallback(() => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(
+      () => performSave("Incremental"),
+      SAVE_DEBOUNCE_MS
+    );
+  }, [performSave]);
 
   const onElementsUpdated = useCallback(
     (remoteElements: OrderedExcalidrawElement[]) => {
@@ -130,7 +167,6 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
       for (const el of reconciled)
         elementVersionsRef.current.set(el.id, el.version);
 
-      applyingRemoteUpdateRef.current = true;
       excalidrawApi.updateScene({
         elements: reconciled,
         captureUpdate: CaptureUpdateAction.NEVER,
@@ -151,20 +187,20 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
     [boardId]
   );
 
-  // A peer persisted the whole scene (typically after loading an .excalidraw
-  // file). The socket only carried the hash — pull the scene from storage and
-  // replace ours, since incremental reconcile can't represent a scene that
-  // shrank.
+  // handled by socket which called after board scene saved
   const onSceneSaved = useCallback(
-    async (sceneHash: number) => {
+    async (sceneHash: number, kind: string) => {
       const excalidrawApi = excalidrawApiRef.current;
       if (!excalidrawApi) return;
 
       // Our own save echoing back.
       if (ownSavedHashesRef.current.delete(sceneHash)) return;
 
-      // Peer edits already reached us incrementally.
       if (hashElementsVersion(excalidrawApi.getSceneElements()) === sceneHash) {
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+          saveTimeoutRef.current = null;
+        }
         return;
       }
 
@@ -176,20 +212,35 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
         return;
       }
 
-      const elements = (fresh.elements ?? []) as OrderedExcalidrawElement[];
+      const stored = (fresh.elements ?? []) as OrderedExcalidrawElement[];
       queryClient.setQueryData(["boards", boardId, "scene"], fresh);
 
+      const nextElements =
+        kind === "Replace"
+          ? stored
+          : (reconcileElements(
+              excalidrawApi.getSceneElementsIncludingDeleted(),
+              stored as RemoteExcalidrawElement[],
+              excalidrawApi.getAppState()
+            ) as unknown as OrderedExcalidrawElement[]);
+
       elementVersionsRef.current = new Map(
-        elements.map((el) => [el.id, el.version])
+        nextElements.map((el) => [el.id, el.version])
       );
 
-      applyingRemoteUpdateRef.current = true;
       excalidrawApi.updateScene({
-        elements,
+        elements: nextElements,
         captureUpdate: CaptureUpdateAction.NEVER,
       });
 
-      const missingFileIds = getReferencedFileIds(elements).filter(
+      if (kind !== "Replace" && !cannotEditRef.current) {
+        const mergedHash = hashElementsVersion(
+          nextElements.filter((el) => !el.isDeleted)
+        );
+        if (mergedHash !== sceneHash) scheduleSave();
+      }
+
+      const missingFileIds = getReferencedFileIds(nextElements).filter(
         (id) => !knownFileIdsRef.current.has(id)
       );
       if (missingFileIds.length > 0) {
@@ -201,7 +252,7 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
         );
       }
     },
-    [boardId, queryClient]
+    [boardId, queryClient, scheduleSave]
   );
 
   const { broadcastElements } = useCanvasHub(
@@ -215,37 +266,7 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
     if (board.data) addRecentBoard(board.data.id);
   }, [board.data]);
 
-  const performSave = useCallback(() => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = null;
-    }
-    const snapshot = latestSceneRef.current;
-    if (!snapshot) return;
-
-    if (cannotEditRef.current) {
-      setEditBlocked(true);
-      return;
-    }
-    const { data, blob, hash } = buildScene(snapshot);
-
-    ownSavedHashesRef.current.add(hash);
-    queryClient.setQueryData(["boards", boardId, "scene"], data);
-    saveScene.mutate(
-      { id: boardId, scene: blob, sceneHash: hash },
-      {
-        onError: (err) => {
-          if (getErrorStatus(err) === 403) setEditBlocked(true);
-        },
-      }
-    );
-  }, [boardId, saveScene, queryClient]);
-
-  const scheduleSave = useCallback(() => {
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(performSave, SAVE_DEBOUNCE_MS);
-  }, [performSave]);
-
+  // called on every excalidraw change(text/displacement of element etc.)
   function handleChange(
     elements: readonly OrderedExcalidrawElement[],
     appState: AppState,
@@ -253,10 +274,9 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
   ) {
     latestSceneRef.current = { elements, appState, files };
 
-    if (applyingRemoteUpdateRef.current) {
-      applyingRemoteUpdateRef.current = false;
-      return;
-    }
+    const prevLiveIds = liveElementIdsRef.current;
+    const liveIds = new Set(elements.map((el) => el.id));
+    liveElementIdsRef.current = liveIds;
 
     const changed = elements.filter(
       (el) => elementVersionsRef.current.get(el.id) !== el.version
@@ -265,22 +285,17 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
       for (const el of changed)
         elementVersionsRef.current.set(el.id, el.version);
 
-      // A wholesale scene swap (loading an .excalidraw file via "Open", pasting
-      // a big selection) touches every element at once — persist it straight
-      // away instead of risking the tab closing before the 3s debounce fires.
-      const isBulkChange =
-        elements.length >= 2 && changed.length === elements.length;
+      const replacedWholesale =
+        prevLiveIds.size > 0 &&
+        [...prevLiveIds].every((id) => !liveIds.has(id));
 
       if (cannotEditRef.current) {
-        // Local-only edit — warn the user it won't be persisted or shared.
         setEditBlocked(true);
+      } else if (replacedWholesale) {
+        performSave("Replace");
       } else {
         broadcastElements(changed);
-        if (isBulkChange) {
-          performSave();
-        } else {
-          scheduleSave();
-        }
+        scheduleSave();
       }
     }
 
@@ -304,6 +319,7 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
       const form = new FormData();
       form.append("Scene", blob, "scene.json");
       form.append("SceneHash", String(hash));
+      form.append("Kind", "Incremental");
 
       fetch(
         `${import.meta.env.VITE_API_BASE_URL}/api/boards/${boardId}/scene`,
@@ -414,6 +430,7 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
           const initialElements = sceneData.elements ?? [];
           for (const el of initialElements) {
             elementVersionsRef.current.set(el.id, el.version);
+            if (!el.isDeleted) liveElementIdsRef.current.add(el.id);
           }
 
           const referencedFileIds = getReferencedFileIds(initialElements);

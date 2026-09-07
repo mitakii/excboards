@@ -52,11 +52,13 @@ export function useSaveScene() {
       id,
       scene,
       sceneHash,
+      kind,
     }: {
       id: string;
       scene: Blob;
       sceneHash: number;
-    }) => boardsApi.saveScene(id, scene, sceneHash),
+      kind?: boardsApi.SceneSaveKind;
+    }) => boardsApi.saveScene(id, scene, sceneHash, kind),
   });
 }
 
