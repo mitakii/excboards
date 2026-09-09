@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace excboards_api.Contracts.Boards;
+namespace excboards_api.Contracts.Search;
 
 public record SearchRequest(
     [Required, MinLength(1)]string Query, 

@@ -13,6 +13,7 @@ public interface IBoardRepository
     Task<List<UserBoard>> GetAllByUserIdAsync(Guid userId);
     Task<List<UserBoard>> GetAllByUserIdPagedAsync(Guid requestedUserId,Guid currentUserId, int pageNumber, int pageSize);
     Task<List<UserBoard>> SearchAsync(Guid currentUserId, string query, int page = 1, int pageSize = 10);
+    Task<List<UserBoard>> SearchByTagsAsync(Guid currentUserId, List<Guid> tagIds, int page = 1, int pageSize = 10);
     
     Task<List<UserBoard>> GetByTagsAsync(IEnumerable<Tag> tags);
     Task<bool> ExistsByNameAsync(Guid userId, string name);

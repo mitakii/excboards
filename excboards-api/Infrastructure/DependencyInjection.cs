@@ -89,6 +89,7 @@ public static class InfrastructureServiceCollectionExtensions
             options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
         
         builder.Services.AddScoped<IBoardRepository, BoardRepository>();
+        
 
         return builder;
     }

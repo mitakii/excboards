@@ -14,6 +14,6 @@ public class UserBoard
     public string NormalizedName { get; set; }
     public string Description { get; set; }
     
-    public ICollection<Tag> Tags { get; set; } =  new List<Tag>();
+    public ICollection<Tag> Tags { get; set; } =  new HashSet<Tag>();
     public ICollection<BoardCollaborator> Collaborators { get; set; } = new List<BoardCollaborator>();
 }

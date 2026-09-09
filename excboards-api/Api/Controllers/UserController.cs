@@ -35,21 +35,6 @@ public class UserController(IUserService userService) : ControllerBase
         return Ok(result.Value.MapToResponse());
     }
 
-    [HttpGet("search")]
-    public async Task<IActionResult> SearchUser([FromQuery] SearchRequest request)
-    {
-        var result = await userService.SearchAsync(request.Query, request.Page, request.PageSize);
-        if(result.IsError)
-            return result.ToProblem(this);
-        
-        return Ok(new SearchResponse<UserResponse>(
-            result.Value.Data.MapToResponse(),
-            result.Value.Total,
-            result.Value.Page,
-            result.Value.PageSize
-        ));
-    }
-
     [Authorize]
     [HttpPost("settings/changePassword")]
     public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)

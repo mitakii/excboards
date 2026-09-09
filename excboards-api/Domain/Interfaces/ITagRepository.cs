@@ -9,7 +9,10 @@ public interface ITagRepository
     public Task DeleteTagAsync(Tag tag);
     
     public Task<Tag?> GetTagAsync(Guid tagId);
+    public Task<List<Tag>> GetTagsByNameAsync(List<string> tags);
+    public Task<List<Guid>> GetTagsIdsByNameAsync(List<string> tags);
     public Task<List<Tag>> GetAllBoardTagsAsync(Guid boardId);
+    
     
     public Task<List<Tag>> SearchTags(string query, int pageNumber, int pageSize);
 }

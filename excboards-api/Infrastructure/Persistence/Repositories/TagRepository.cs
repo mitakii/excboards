@@ -23,6 +23,24 @@ public class TagRepository(AppDbContext context) : ITagRepository
         return context.Tags.FirstOrDefaultAsync(t => t.Id == tagId);
     }
 
+    public Task<List<Tag>> GetTagsByNameAsync(List<string> tags)
+    {
+        return context.Tags
+            .AsNoTracking()
+            .Where(t => tags.Contains(t.Name))
+            .ToListAsync();
+    }
+
+    public Task<List<Guid>> GetTagsIdsByNameAsync(List<string> tags)
+    {
+        var lowered = tags.Select(t => t.ToLower()).ToList();
+        return context.Tags
+            .AsNoTracking()
+            .Where(t => lowered.Contains(t.Name.ToLower()))
+            .Select(t => t.Id)
+            .ToListAsync();
+    }
+
     public Task<List<Tag>> GetAllBoardTagsAsync(Guid boardId)
     {
         return context.UserBoards

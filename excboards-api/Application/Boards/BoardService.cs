@@ -64,6 +64,39 @@ public class BoardService(IBoardRepository boardRepository,
         };
     }
 
+    public async Task<ErrorOr<PagedResult<UserBoardDto>>> SearchByTagsAsync(Guid userId, List<string> tags, int page = 1, int pageSize = 10)
+    {
+        var names = tags
+            .Select(t => t.Trim().TrimStart('#').Trim())
+            .Where(t => t.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (names.Count == 0)
+            return Error.Validation("Board.TagSearch", "At least one tag is required.");
+
+        var tagIds = await tagRepository.GetTagsIdsByNameAsync(names);
+        
+        if (tagIds.Count < names.Count)
+            return new PagedResult<UserBoardDto>
+            {
+                Data = [],
+                Page = page,
+                PageSize = pageSize,
+                Total = 0
+            };
+
+        var boards = await boardRepository.SearchByTagsAsync(userId, tagIds, page, pageSize);
+        
+        return new PagedResult<UserBoardDto>()
+        {
+            Data = boards.MapToDto(),
+            Page = page,
+            PageSize = pageSize,
+            Total = boards.Count
+        };
+    }
+    
     public async Task<ErrorOr<UserBoardDto>> GetByIdAsync(Guid userId, Guid boardId)
     {
         var board = await boardRepository.GetByIdAsync(boardId);

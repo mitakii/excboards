@@ -88,20 +88,6 @@ public class BoardsController
         return Ok(result.Value.MapToResponse());
     }
 
-    [HttpGet("search")]
-    public async Task<IActionResult> Search([FromQuery] SearchRequest request)
-    {
-        var result = await boardService.SearchAsync(User.GetUserId(), request.Query, request.Page, request.PageSize);
-        if(result.IsError)
-            return  result.ToProblem(this);
-        
-        return Ok(new SearchResponse<BoardResponse>(
-            Result: result.Value.Data.MapToResponse(),
-            result.Value.Total, 
-            result.Value.Page, 
-            result.Value.PageSize));
-    }
-
     [HttpGet("{boardId:guid}/scene")]
     public async Task<IActionResult> GetScene(Guid boardId)
     {

@@ -9,7 +9,7 @@ namespace Application.Tags;
 
 public class TagService(ITagRepository tagRepository)
 {
-    public async Task<ErrorOr<PagedResult<TagDto>>> Search(string query, int page, int pageSize)
+    public async Task<ErrorOr<PagedResult<TagDto>>> SearchAsync(string query, int page, int pageSize)
     {
         var result = await tagRepository.SearchTags(query, page, pageSize);
         if(result.Count == 0)

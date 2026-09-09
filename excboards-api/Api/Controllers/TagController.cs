@@ -15,18 +15,4 @@ namespace excboards_api.Controllers;
 [Route("api/[controller]")]
 [Authorize]
 public class TagController(TagService tagService): ControllerBase
-{
-    [HttpGet("search")]
-    public async Task<IActionResult> Search([FromQuery] SearchRequest request)
-    {
-        var result = await tagService.Search(request.Query,  request.Page, request.PageSize);
-        if(result.IsError)
-            return result.ToProblem(this);
-        
-        return Ok(new SearchResponse<TagResponse>(
-            Result: result.Value.Data.MapToResponse(), 
-            result.Value.Page, 
-            result.Value.PageSize, 
-            result.Value.Total));
-    }
-}
+{ }

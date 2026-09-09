@@ -60,6 +60,7 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
         return context.UserBoards
             .AsNoTracking()
             .Include(ub => ub.Tags)
+            .AsSplitQuery()
             .Where(ub => ub.UserId == requestedUserId &&
                          (ub.IsPublished ||
                           currentUserId == ub.UserId ||
@@ -72,11 +73,30 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
 
     public Task<List<UserBoard>> SearchAsync(Guid currentUserId, string query, int page = 1, int pageSize = 10)
     {
-        return context.UserBoards.AsNoTracking()
+        return context.UserBoards
+            .AsNoTracking()
             .Include(ub => ub.Tags)
+            .AsSplitQuery()
             .Where(ub => (
                 EF.Functions.ILike(ub.Name, $"%{query}%") ||
                 EF.Functions.ILike(ub.Description, $"%{query}%")) &&
+                         (ub.IsPublished || 
+                          currentUserId == ub.UserId || 
+                          ub.Collaborators.Any(c => c.UserId == currentUserId)))
+            .OrderBy(ub => ub.Created)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+    }
+
+    public Task<List<UserBoard>> SearchByTagsAsync(Guid currentUserId, List<Guid> tagIds, int page = 1, int pageSize = 10)
+    {
+        
+        return context.UserBoards
+            .AsNoTracking()
+            .Include(ub => ub.Tags)
+            .AsSplitQuery()
+            .Where(ub => ub.Tags.Count(t => tagIds.Contains(t.Id)) == tagIds.Count &&
                          (ub.IsPublished || 
                           currentUserId == ub.UserId || 
                           ub.Collaborators.Any(c => c.UserId == currentUserId)))
@@ -100,7 +120,7 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
         return context.UserBoards
             .AsNoTracking()
             .Include(ub => ub.Tags)
-            .Where(ub => tagIds.All(id => ub.Tags.Select(t => t.Id).Contains(id)))
+            .Where(ub => ub.Tags.Count(t => tagIds.Contains(t.Id)) == tagIds.Count)
             .ToListAsync();
     }
 }
