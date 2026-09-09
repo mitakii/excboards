@@ -1,3 +1,4 @@
+import { isAxiosError } from "axios";
 import { api } from "@/lib/api";
 
 export interface UserProfile {
@@ -34,9 +35,17 @@ interface SearchResponse<T> {
 }
 
 export async function searchUsers(query: string, page = 1, pageSize = 10) {
-  const res = await api.get<SearchResponse<UserSearchResult>>(
-    "/api/User/search",
-    { params: { query, page, pageSize } },
-  );
-  return res.data;
+  try {
+    const res = await api.get<SearchResponse<UserSearchResult>>(
+      "/api/search/user",
+      { params: { query, page, pageSize } },
+    );
+    return res.data;
+  } catch (err) {
+    // The backend returns 404 (not an empty list) when nothing matches.
+    if (isAxiosError(err) && err.response?.status === 404) {
+      return { result: [], totalCount: 0, currentPage: page, pageSize };
+    }
+    throw err;
+  }
 }
