@@ -10,13 +10,15 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
 {
     public async Task AddAsync(UserBoard board)
     {
-        context.UserBoards.Add(board);
         try
         {
+            context.UserBoards.Add(board);
             await context.SaveChangesAsync();
         }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        catch (DbUpdateException ex)
+            when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
         {
+            context.Entry(board).State = EntityState.Detached;
             throw new DuplicateBoardNameException(board.UserId, board.Name);
         }
     }
@@ -33,11 +35,20 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
         return context.SaveChangesAsync();
     }
 
-    public Task UpdateAsync(UserBoard board)
+    public async Task UpdateAsync(UserBoard board)
     {
         board.Updated = DateTime.UtcNow;
         context.UserBoards.Update(board);
-        return context.SaveChangesAsync();
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex)
+            when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            throw new DuplicateBoardNameException(board.UserId, board.Name);
+        }
     }
 
     public Task<UserBoard?> GetByIdAsync(Guid id)

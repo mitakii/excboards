@@ -15,12 +15,20 @@ public class BoardService(IBoardRepository boardRepository,
     IPermissionService permissionService,
     ITagRepository tagRepository)
 {
-    public async Task<ErrorOr<Guid>> CreateAsync(Guid userId, string name, string description, Stream stream)
+    public async Task<ErrorOr<Guid>> CreateAsync(Guid userId, string name, string description, List<string>? tags, Stream stream)
     {
+        name = name.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+            return Error.Validation("Board.Name", "Board name is required.");
+
         if (await boardRepository.ExistsByNameAsync(userId, name))
-            return Error.Validation("Board.DuplicateName", "A board with this name already exists.");
+            return Error.Conflict("Board.DuplicateName", $"You already have a board named \"{name}\".");
 
         var now = DateTime.UtcNow;
+
+        List<Tag> boardTags = new();
+        if(tags is not null && tags.Count > 0)
+            boardTags = await tagRepository.CreateTagsAsync(tags);
 
         var board = new UserBoard
         {
@@ -32,8 +40,9 @@ public class BoardService(IBoardRepository boardRepository,
             IsPublished = false,
             Created = now,
             Updated = now,
+            Tags = boardTags
         };
-        
+
         await fileRepository.UploadFileAsync(BoardFileKeys.Scene(board.Id), stream);
 
         try
@@ -42,7 +51,7 @@ public class BoardService(IBoardRepository boardRepository,
         }
         catch (DuplicateBoardNameException)
         {
-            return Error.Validation("Board.DuplicateName", "A board with this name already exists.");
+            return Error.Conflict("Board.DuplicateName", $"You already have a board named \"{name}\".");
         }
 
         return board.Id;
@@ -170,13 +179,29 @@ public class BoardService(IBoardRepository boardRepository,
             return permission.Errors;
         
         board.Description = string.IsNullOrWhiteSpace(dto.Description) ? board.Description : dto.Description;
-        board.Name = string.IsNullOrWhiteSpace(dto.Name) ? board.Name : dto.Name;
-        board.NormalizedName = board.Name.ToLower();
-        
+
+        var newName = string.IsNullOrWhiteSpace(dto.Name) ? board.Name : dto.Name.Trim();
+        if (!string.Equals(newName, board.Name, StringComparison.Ordinal))
+        {
+            if (await boardRepository.ExistsByNameAsync(board.UserId, newName))
+                return Error.Conflict("Board.DuplicateName", $"You already have a board named \"{newName}\".");
+
+            board.Name = newName;
+            board.NormalizedName = newName.ToLower();
+        }
+
         if (dto.Tags.Count > 0)
             board.Tags = await tagRepository.CreateTagsAsync(dto.Tags);
-        
-        await boardRepository.UpdateAsync(board);
+
+        try
+        {
+            await boardRepository.UpdateAsync(board);
+        }
+        catch (DuplicateBoardNameException)
+        {
+            return Error.Conflict("Board.DuplicateName", $"You already have a board named \"{newName}\".");
+        }
+
         return Result.Updated;
     }
 

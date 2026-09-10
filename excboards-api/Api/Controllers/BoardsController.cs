@@ -23,7 +23,7 @@ public class BoardsController
         await using var stream = request.Scene.OpenReadStream();
         
         var result = await boardService
-            .CreateAsync(User.GetUserId(), request.Name, request.Description ?? string.Empty, stream);
+            .CreateAsync(User.GetUserId(), request.Name, request.Description ?? string.Empty, request.Tags ,stream);
         if (result.IsError)
             return result.ToProblem(this);
 
