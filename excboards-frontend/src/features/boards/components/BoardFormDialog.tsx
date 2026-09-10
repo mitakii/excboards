@@ -67,11 +67,11 @@ export function BoardFormDialog({ trigger, board }: BoardFormDialogProps) {
         });
         setOpen(false);
       } else {
-        // NOTE: tags aren't sent — CreateBoardRequest has no Tags field on the backend yet.
         const scene = new Blob([EMPTY_SCENE], { type: "application/json" });
         const boardId = await createBoard.mutateAsync({
           name,
           description,
+          tags,
           scene,
         });
         addRecentBoard(boardId);

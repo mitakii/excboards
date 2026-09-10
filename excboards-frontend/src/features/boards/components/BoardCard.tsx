@@ -25,6 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ClampText } from "@/components/ClampText";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { BoardOverviewDialog } from "./BoardOverviewDialog";
 
@@ -51,11 +52,12 @@ function VisibilityIcon({ isPublished }: { isPublished: boolean }) {
 function BoardRowMenu({
   board,
   onDelete,
+  onOpenOverview,
 }: {
   board: BoardCardData;
   onDelete?: (id: string) => void;
+  onOpenOverview: () => void;
 }) {
-  const [overviewOpen, setOverviewOpen] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   return (
@@ -72,7 +74,7 @@ function BoardRowMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => setOverviewOpen(true)}>
+          <DropdownMenuItem onSelect={onOpenOverview}>
             <InfoIcon />
             Overview
           </DropdownMenuItem>
@@ -93,11 +95,6 @@ function BoardRowMenu({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-      <BoardOverviewDialog
-        boardId={board.id}
-        open={overviewOpen}
-        onOpenChange={setOverviewOpen}
-      />
       {onDelete && (
         <ConfirmDialog
           open={confirmDeleteOpen}
@@ -121,14 +118,25 @@ export function BoardCard({
   onDelete?: (id: string) => void;
   layout?: "card" | "row";
 }) {
+  const [overviewOpen, setOverviewOpen] = useState(false);
+
+  const overviewDialog = (
+    <BoardOverviewDialog
+      boardId={board.id}
+      open={overviewOpen}
+      onOpenChange={setOverviewOpen}
+    />
+  );
+
   if (layout === "row") {
     return (
       <div className="relative flex items-start gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:bg-muted/50">
-        {/* Stretched link — clicking anywhere on the card opens the board,
-            except the nested owner link / actions menu (z-10 above this). */}
-        <Link
-          to={`/boards/${board.id}`}
-          aria-label={board.name}
+        {/* Stretched button — clicking anywhere on the card opens the board
+            overview, except the nested owner link / actions menu (z-10 above). */}
+        <button
+          type="button"
+          onClick={() => setOverviewOpen(true)}
+          aria-label={`Overview of ${board.name}`}
           className="absolute inset-0 rounded-xl"
         />
 
@@ -158,9 +166,12 @@ export function BoardCard({
           )}
 
           {board.description && (
-            <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+            <ClampText
+              lines={3}
+              className="mt-2 text-sm text-muted-foreground"
+            >
               {board.description}
-            </p>
+            </ClampText>
           )}
 
           {board.tags.length > 0 && (
@@ -175,21 +186,38 @@ export function BoardCard({
         </div>
 
         <div className="relative z-10 shrink-0">
-          <BoardRowMenu board={board} onDelete={onDelete} />
+          <BoardRowMenu
+            board={board}
+            onDelete={onDelete}
+            onOpenOverview={() => setOverviewOpen(true)}
+          />
         </div>
+        {overviewDialog}
       </div>
     );
   }
 
   return (
-    <Link to={`/boards/${board.id}`} className="relative block">
-      <Card size="sm" className="h-full transition-colors hover:bg-muted/50">
+    <div className="group relative block h-full">
+      {/* Stretched button — clicking the card opens the board overview. */}
+      <button
+        type="button"
+        onClick={() => setOverviewOpen(true)}
+        aria-label={`Overview of ${board.name}`}
+        className="absolute inset-0 rounded-xl"
+      />
+      <Card
+        size="sm"
+        className="h-full transition-colors group-hover:bg-muted/50"
+      >
         <CardHeader>
           <CardTitle className="flex items-center gap-1.5">
             <VisibilityIcon isPublished={board.isPublished} />
             <span className="truncate">{board.name}</span>
           </CardTitle>
-          <CardDescription>{board.description}</CardDescription>
+          <CardDescription>
+            <ClampText lines={3}>{board.description}</ClampText>
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           {board.tags.length > 0 && (
@@ -227,17 +255,14 @@ export function BoardCard({
             <Button
               size="sm"
               variant="destructive"
-              className="absolute top-2 right-2"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
+              className="absolute top-2 right-2 z-10"
             >
               Delete
             </Button>
           }
         />
       )}
-    </Link>
+      {overviewDialog}
+    </div>
   );
 }

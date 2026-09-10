@@ -37,11 +37,13 @@ export interface BoardCollaborator {
 export async function createBoard(
   name: string,
   description: string,
+  tags: string[],
   scene: Blob
 ) {
   const form = new FormData();
   form.append("Name", name);
   form.append("Description", description);
+  for (const tag of tags) form.append("Tags", tag);
   form.append("Scene", scene, "scene.json");
 
   const res = await api.post<string>("/api/boards", form);

@@ -80,10 +80,40 @@ export function getErrorMessage(err: unknown, fallback: string): string {
   const data = err.response?.data;
   if (Array.isArray(data)) return data.join(" ");
   if (typeof data === "string") return data;
-  if (data && typeof data === "object" && "title" in data)
-    return String(data.title);
+
+  if (data && typeof data === "object") {
+    // ASP.NET ValidationProblemDetails: prefer the per-field messages over the
+    // generic "One or more validation errors occurred." title.
+    const fieldErrors = flattenValidationErrors(
+      (data as { errors?: unknown }).errors
+    );
+    if (fieldErrors.length > 0) return fieldErrors.join(" ");
+
+    if ("detail" in data && data.detail) return String(data.detail);
+    if ("title" in data && data.title) return String(data.title);
+  }
 
   return fallback;
+}
+
+function flattenValidationErrors(errors: unknown): string[] {
+  if (!errors || typeof errors !== "object" || Array.isArray(errors)) return [];
+
+  const messages: string[] = [];
+  for (const [field, value] of Object.entries(
+    errors as Record<string, unknown>
+  )) {
+    const parts = Array.isArray(value) ? value : [value];
+    for (const part of parts) {
+      const text = String(part).trim();
+      if (!text) continue;
+      // Keep bare field names (e.g. "$.scene") out of the message when the
+      // text is already a full sentence.
+      const isGeneric = field.startsWith("$") || field === "";
+      messages.push(isGeneric || /\s/.test(text) ? text : `${field}: ${text}`);
+    }
+  }
+  return messages;
 }
 
 export function getErrorStatus(err: unknown): number | undefined {

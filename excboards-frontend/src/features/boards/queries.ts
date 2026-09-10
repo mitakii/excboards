@@ -18,12 +18,14 @@ export function useCreateBoard() {
     mutationFn: ({
       name,
       description,
+      tags,
       scene,
     }: {
       name: string;
       description: string;
+      tags: string[];
       scene: Blob;
-    }) => boardsApi.createBoard(name, description, scene),
+    }) => boardsApi.createBoard(name, description, tags, scene),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["boards", "u"] }),
   });

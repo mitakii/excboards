@@ -208,3 +208,21 @@ body {
     @apply bg-background text-foreground;}
   html {
     @apply font-sans;}}
+
+/* Used by <ClampText>: text breaks anywhere (so a single very long "word"
+   still wraps instead of overflowing) and, only once it is actually clamped,
+   fades out at the bottom instead of showing an ellipsis. */
+.fade-text {
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.fade-text[data-clamped] {
+  --fade: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - 0.8lh),
+    transparent 100%
+  );
+  -webkit-mask-image: var(--fade);
+  mask-image: var(--fade);
+}

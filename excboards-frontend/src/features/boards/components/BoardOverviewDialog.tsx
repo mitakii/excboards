@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  ArrowRightIcon,
   GlobeIcon,
   LockIcon,
   PencilIcon,
@@ -209,14 +210,11 @@ function BoardOverviewContent({ boardId }: { boardId: string }) {
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{data.name}</DialogTitle>
+        <DialogTitle className="wrap-anywhere">{data.name}</DialogTitle>
       </DialogHeader>
 
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            Author
-          </span>
+      <div className="min-w-0 space-y-4">
+        <div className="flex min-w-0 items-center gap-2 text-sm">
           {owner.data ? (
             <DialogClose asChild>
               <Link
@@ -234,7 +232,9 @@ function BoardOverviewContent({ boardId }: { boardId: string }) {
                     {owner.data.username.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <span className="text-foreground">{owner.data.username}</span>
+                <span className="wrap-anywhere text-foreground">
+                  {owner.data.username}
+                </span>
               </Link>
             </DialogClose>
           ) : (
@@ -244,26 +244,62 @@ function BoardOverviewContent({ boardId }: { boardId: string }) {
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={data.isPublished ? "default" : "outline"}>
-            {data.isPublished ? <GlobeIcon /> : <LockIcon />}
-            {data.isPublished ? "Published" : "Private"}
-          </Badge>
-        </div>
-
-        {error && <p className="text-sm text-destructive">{error}</p>}
-
         {(data.tags ?? []).length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {data.tags.map((tag) => (
-              <Badge key={tag.id} variant="secondary">
+              <Badge
+                key={tag.id}
+                variant="secondary"
+                className="max-w-full wrap-anywhere"
+              >
                 {tag.name}
               </Badge>
             ))}
           </div>
         )}
 
-        <p className="text-sm whitespace-pre-wrap text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2">
+          {data.isPublished ? (
+            <Badge variant="default">
+              <GlobeIcon />
+              Published
+            </Badge>
+          ) : canEdit ? (
+            <ConfirmDialog
+              title="Publish this board?"
+              description="Anyone will be able to find and view it. Publishing can't be undone."
+              confirmLabel="Publish"
+              confirmVariant="default"
+              onConfirm={handlePublish}
+              trigger={
+                <button
+                  type="button"
+                  disabled={publishBoard.isPending}
+                  aria-label="Publish board"
+                  className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                >
+                  <Badge
+                    variant="outline"
+                    className="cursor-pointer gap-1 transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    {publishBoard.isPending ? <Spinner /> : <LockIcon />}
+                    Private
+                    <span className="text-muted-foreground">· Publish</span>
+                  </Badge>
+                </button>
+              }
+            />
+          ) : (
+            <Badge variant="outline">
+              <LockIcon />
+              Private
+            </Badge>
+          )}
+        </div>
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
+
+        <p className="text-sm whitespace-pre-wrap wrap-anywhere text-muted-foreground">
           {data.description?.trim() || "No description."}
         </p>
 
@@ -395,34 +431,24 @@ function BoardOverviewContent({ boardId }: { boardId: string }) {
         </section>
       </div>
 
-      {canEdit && (
-        <DialogFooter className="sm:justify-between">
-          {!data.isPublished ? (
-            <ConfirmDialog
-              title="Publish this board?"
-              description="Anyone will be able to find and view it. Publishing can't be undone."
-              confirmLabel="Publish"
-              confirmVariant="default"
-              onConfirm={handlePublish}
-              trigger={
-                <Button
-                  disabled={publishBoard.isPending}
-                  className="bg-green-600 text-white hover:bg-green-500 focus-visible:ring-green-600/30"
-                >
-                  {publishBoard.isPending ? <Spinner /> : <GlobeIcon />}
-                  Publish
-                </Button>
-              }
-            />
-          ) : (
-            <span aria-hidden />
-          )}
-          <Button variant="outline" onClick={startEditing}>
+      <DialogFooter className="flex-col gap-2 sm:flex-col">
+        {canEdit && (
+          <Button
+            variant="outline"
+            onClick={startEditing}
+            className="w-full sm:w-auto sm:self-end"
+          >
             <PencilIcon />
             Edit board
           </Button>
-        </DialogFooter>
-      )}
+        )}
+        <Button asChild size="lg" className="h-11 w-full text-base">
+          <Link to={`/boards/${boardId}`}>
+            Open board
+            <ArrowRightIcon />
+          </Link>
+        </Button>
+      </DialogFooter>
     </>
   );
 }
