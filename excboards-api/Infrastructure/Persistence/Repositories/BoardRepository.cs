@@ -1,3 +1,6 @@
+using System.Collections.Immutable;
+using Application.Mappers;
+using Domain.Dto;
 using Domain.Entities;
 using Domain.Exceptions;
 using Domain.Interfaces;
@@ -66,9 +69,9 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
             .ToListAsync();
     }
 
-    public Task<List<UserBoard>> GetAllByUserIdPagedAsync(Guid requestedUserId, Guid currentUserId, int pageNumber, int pageSize)
+    public async Task<PagedResult<UserBoard>> GetAllByUserIdPagedAsync(Guid requestedUserId, Guid currentUserId, int pageNumber, int pageSize)
     {
-        return context.UserBoards
+        var q = context.UserBoards
             .AsNoTracking()
             .Include(ub => ub.Tags)
             .AsSplitQuery()
@@ -77,14 +80,27 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
                           currentUserId == ub.UserId ||
                           ub.Collaborators.Any(c => c.UserId == currentUserId)))
             .OrderBy(ub => ub.Created)
+            .ThenBy(ub => ub.Id);
+        
+        var count = await q.CountAsync();
+            
+        var data = await q
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
+
+        return new PagedResult<UserBoard>()
+        {
+            Data = data,
+            Page = pageNumber,
+            PageSize = data.Count,
+            Total = count,
+        };
     }
 
-    public Task<List<UserBoard>> SearchAsync(Guid currentUserId, string query, int page = 1, int pageSize = 10)
+    public async Task<PagedResult<UserBoard>> SearchAsync(Guid currentUserId, string query, int page = 1, int pageSize = 10)
     {
-        return context.UserBoards
+        var q = context.UserBoards
             .AsNoTracking()
             .Include(ub => ub.Tags)
             .AsSplitQuery()
@@ -95,15 +111,27 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
                           currentUserId == ub.UserId || 
                           ub.Collaborators.Any(c => c.UserId == currentUserId)))
             .OrderBy(ub => ub.Created)
-            .Skip((page - 1) * pageSize)
+            .ThenBy(ub => ub.Id);
+        
+        var count = await q.CountAsync();
+        
+        var data = await q.Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
+
+        return new PagedResult<UserBoard>()
+        {
+            Data = data,
+            Page = page,
+            PageSize = data.Count,
+            Total = count,
+        };
     }
 
-    public Task<List<UserBoard>> SearchByTagsAsync(Guid currentUserId, List<Guid> tagIds, int page = 1, int pageSize = 10)
+    public async Task<PagedResult<UserBoard>> SearchByTagsAsync(Guid currentUserId, List<Guid> tagIds, int page = 1, int pageSize = 10)
     {
         
-        return context.UserBoards
+        var q = context.UserBoards
             .AsNoTracking()
             .Include(ub => ub.Tags)
             .AsSplitQuery()
@@ -112,9 +140,21 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
                           currentUserId == ub.UserId || 
                           ub.Collaborators.Any(c => c.UserId == currentUserId)))
             .OrderBy(ub => ub.Created)
-            .Skip((page - 1) * pageSize)
+            .ThenBy(ub => ub.Id);
+        
+        var count = await q.CountAsync();
+        
+        var data = await q.Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
+
+        return new PagedResult<UserBoard>()
+        {
+            Data = data,
+            Page = page,
+            PageSize = data.Count,
+            Total = count,
+        };
     }
 
     public Task<bool> ExistsByNameAsync(Guid userId, string name)

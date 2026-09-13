@@ -1,5 +1,14 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 
+/** Mirrors backend Contracts.Search.SearchResponse<T> (camel-cased) — the
+ * paged-list envelope shared by search and other paginated board endpoints. */
+export interface PagedEnvelope<T> {
+  result: T[];
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+}
+
 interface QueueItem {
   resolve: () => void;
   reject: (error: unknown) => void;

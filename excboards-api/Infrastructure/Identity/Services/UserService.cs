@@ -1,5 +1,6 @@
 using Application.Dto;
 using Application.Interfaces;
+using Domain.Dto;
 using ErrorOr;
 using Infrastructure.Identity.Interfaces;
 using Infrastructure.Mappers;

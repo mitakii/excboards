@@ -209,6 +209,18 @@ function BoardOverviewContent({ boardId }: { boardId: string }) {
 
   return (
     <>
+      {canEdit && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={startEditing}
+          className="absolute top-2 right-10"
+        >
+          <PencilIcon />
+          <span className="sr-only">Edit board</span>
+        </Button>
+      )}
+
       <DialogHeader>
         <DialogTitle className="wrap-anywhere">{data.name}</DialogTitle>
       </DialogHeader>
@@ -431,17 +443,7 @@ function BoardOverviewContent({ boardId }: { boardId: string }) {
         </section>
       </div>
 
-      <DialogFooter className="flex-col gap-2 sm:flex-col">
-        {canEdit && (
-          <Button
-            variant="outline"
-            onClick={startEditing}
-            className="w-full sm:w-auto sm:self-end"
-          >
-            <PencilIcon />
-            Edit board
-          </Button>
-        )}
+      <DialogFooter>
         <Button asChild size="lg" className="h-11 w-full text-base">
           <Link to={`/boards/${boardId}`}>
             Open board

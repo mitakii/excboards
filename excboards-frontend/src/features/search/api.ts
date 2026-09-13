@@ -1,14 +1,8 @@
 import { isAxiosError } from "axios";
-import { api } from "@/lib/api";
+import { api, type PagedEnvelope } from "@/lib/api";
 import type { BoardTag } from "@/features/boards/api";
 
-/** Mirrors backend Contracts.Search.SearchResponse<T> (camel-cased). */
-export interface SearchEnvelope<T> {
-  result: T[];
-  totalCount: number;
-  currentPage: number;
-  pageSize: number;
-}
+export type SearchEnvelope<T> = PagedEnvelope<T>;
 
 /** Mirrors backend Contracts.Boards.BoardResponse. */
 export interface BoardSearchResult {

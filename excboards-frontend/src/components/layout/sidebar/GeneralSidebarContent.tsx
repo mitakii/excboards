@@ -52,11 +52,11 @@ export function GeneralSidebarContent() {
         <SidebarGroup>
           <SidebarGroupLabel>Your boards</SidebarGroupLabel>
           <SidebarGroupContent>
-            {(myBoards.data ?? []).length === 0 ? (
+            {(myBoards.data?.result ?? []).length === 0 ? (
               <EmptyHint>You haven't created any boards yet.</EmptyHint>
             ) : (
               <SidebarMenu className="gap-1">
-                {(myBoards.data ?? []).map((board) => (
+                {(myBoards.data?.result ?? []).map((board) => (
                   <SidebarBoardTile
                     key={board.id}
                     id={board.id}

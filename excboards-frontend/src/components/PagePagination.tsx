@@ -9,13 +9,19 @@ import {
 interface PagePaginationProps {
   page: number;
   onPageChange: (page: number) => void;
-  pageLength: number;
   pageSize: number;
+  /** Total number of items across all pages, as reported by the backend. */
+  total: number;
 }
 
-export function PagePagination({ page, onPageChange, pageLength, pageSize }: PagePaginationProps) {
+export function PagePagination({
+  page,
+  onPageChange,
+  pageSize,
+  total,
+}: PagePaginationProps) {
   const hasPreviousPage = page > 1;
-  const hasNextPage = pageLength >= pageSize;
+  const hasNextPage = page * pageSize < total;
 
   return (
     <Pagination className="mt-2 mb-0 justify-start">

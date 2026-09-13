@@ -12,7 +12,7 @@ export function YourBoardsSection({ user }: { user: AuthUser }) {
   const boards = useUserBoards(user.userId, page, PAGE_SIZE);
   const deleteBoard = useDeleteBoard();
 
-  const items: BoardCardData[] = (boards.data ?? []).map((board) => ({
+  const items: BoardCardData[] = (boards.data?.result ?? []).map((board) => ({
     id: board.id,
     name: board.name,
     description: board.description ?? "",
@@ -31,8 +31,13 @@ export function YourBoardsSection({ user }: { user: AuthUser }) {
         emptyMessage="You haven't created any boards yet."
         onDelete={(id) => deleteBoard.mutate(id)}
       />
-      {items.length >= PAGE_SIZE && (
-        <PagePagination page={page} onPageChange={setPage} pageLength={items.length} pageSize={PAGE_SIZE} />
+      {(boards.data?.totalCount ?? 0) > PAGE_SIZE && (
+        <PagePagination
+          page={page}
+          onPageChange={setPage}
+          pageSize={PAGE_SIZE}
+          total={boards.data?.totalCount ?? 0}
+        />
       )}
     </section>
   );

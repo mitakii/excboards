@@ -1,4 +1,5 @@
 using Application.Dto;
+using Domain.Dto;
 using ErrorOr;
 using Microsoft.AspNetCore.Http;
 

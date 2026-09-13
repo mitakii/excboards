@@ -3,6 +3,7 @@ using Application.Dto;
 using Application.Interfaces;
 using Application.Mappers;
 using Application.Storage;
+using Domain.Dto;
 using Domain.Entities;
 using Domain.Exceptions;
 using Domain.Interfaces;
@@ -66,10 +67,10 @@ public class BoardService(IBoardRepository boardRepository,
         
         return new PagedResult<UserBoardDto>()
         {
-            Data = boards.MapToDto(),
+            Data = boards.Data.MapToDto(),
             Page = page,
             PageSize = pageSize,
-            Total = boards.Count
+            Total = boards.Total
         };
     }
 
@@ -99,10 +100,10 @@ public class BoardService(IBoardRepository boardRepository,
         
         return new PagedResult<UserBoardDto>()
         {
-            Data = boards.MapToDto(),
+            Data = boards.Data.MapToDto(),
             Page = page,
             PageSize = pageSize,
-            Total = boards.Count
+            Total = boards.Total
         };
     }
     
@@ -258,15 +259,21 @@ public class BoardService(IBoardRepository boardRepository,
         return true;
     }
 
-    public async Task<ErrorOr<List<UserBoardDto>?>> GetUserBoards(Guid requestUserId, Guid currentUserId, int pageNumber, int pageSize)
+    public async Task<ErrorOr<PagedResult<UserBoardDto>>> GetUserBoards(Guid requestUserId, Guid currentUserId, int pageNumber, int pageSize)
     {
         var userBoards = await boardRepository
             .GetAllByUserIdPagedAsync(requestUserId, currentUserId, pageNumber, pageSize);
-        
-        if(userBoards.Count == 0)
+
+        if(userBoards.Total == 0)
             return Error.NotFound("Board.NotFound", "Board not found");
-        
-        return userBoards.MapToDto();
+
+        return new PagedResult<UserBoardDto>()
+        {
+            Data = userBoards.Data.MapToDto(),
+            Page = pageNumber,
+            PageSize = pageSize,
+            Total = userBoards.Total
+        };
     }
 
     public async Task<ErrorOr<Dictionary<string, string>>> GetDownloadPresignedUrls(Guid userId, Guid boardId, List<string> sceneFileIds)

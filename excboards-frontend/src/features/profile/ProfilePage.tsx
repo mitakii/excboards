@@ -45,7 +45,7 @@ export function ProfilePage() {
     );
   }
 
-  const items: BoardCardData[] = (boards.data ?? []).map((board) => ({
+  const items: BoardCardData[] = (boards.data?.result ?? []).map((board) => ({
     id: board.id,
     name: board.name,
     description: board.description ?? "",
@@ -67,8 +67,13 @@ export function ProfilePage() {
           emptyMessage="No boards yet."
           onDelete={isOwnProfile ? (id) => deleteBoard.mutate(id) : undefined}
         />
-        {items.length >= PAGE_SIZE && (
-          <PagePagination page={page} onPageChange={setPage} pageLength={items.length} pageSize={PAGE_SIZE} />
+        {(boards.data?.totalCount ?? 0) > PAGE_SIZE && (
+          <PagePagination
+            page={page}
+            onPageChange={setPage}
+            pageSize={PAGE_SIZE}
+            total={boards.data?.totalCount ?? 0}
+          />
         )}
       </div>
     </div>

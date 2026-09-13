@@ -1,6 +1,7 @@
 using System.Reflection;
 using Application.Dto;
 using Application.Mappers;
+using Domain.Dto;
 using Domain.Entities;
 using Domain.Interfaces;
 using ErrorOr;

@@ -1,6 +1,7 @@
 using Application.Boards;
 using Application.Dto;
 using excboards_api.Contracts.Boards;
+using excboards_api.Contracts.Search;
 using excboards_api.Extensions;
 using excboards_api.Hubs;
 using excboards_api.Mappers;
@@ -75,7 +76,12 @@ public class BoardsController
         if (result.IsError)
             return result.ToProblem(this);
 
-        return Ok(result.Value.MapToResponse());
+        return Ok(new SearchResponse<BoardResponse>(
+            result.Value.Data.MapToResponse(),
+            result.Value.Total,
+            result.Value.Page,
+            result.Value.PageSize)
+        );
     }
     
     [HttpGet("{boardId:guid}")]

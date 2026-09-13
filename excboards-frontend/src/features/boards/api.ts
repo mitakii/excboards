@@ -1,6 +1,6 @@
 import type { ExcalidrawInitialDataState } from "@excalidraw/excalidraw/types";
 import { isAxiosError } from "axios";
-import { api } from "@/lib/api";
+import { api, type PagedEnvelope } from "@/lib/api";
 
 export interface BoardTag {
   id: string;
@@ -142,14 +142,16 @@ export async function listUserBoards(
   userId: string,
   page: number,
   pageSize: number
-) {
+): Promise<PagedEnvelope<Board>> {
   try {
-    const res = await api.get<Board[]>(`/api/boards/u/${userId}`, {
+    const res = await api.get<PagedEnvelope<Board>>(`/api/boards/u/${userId}`, {
       params: { page, pageSize },
     });
     return res.data;
   } catch (err) {
-    if (isAxiosError(err) && err.response?.status === 404) return [];
+    if (isAxiosError(err) && err.response?.status === 404) {
+      return { result: [], totalCount: 0, currentPage: page, pageSize };
+    }
     throw err;
   }
 }

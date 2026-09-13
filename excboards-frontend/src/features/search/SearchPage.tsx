@@ -28,6 +28,7 @@ export function SearchPage() {
   );
 
   const results = data?.envelope.result ?? [];
+  const totalCount = data?.envelope.totalCount ?? 0;
   const boardResults =
     data && data.mode !== "user" ? data.envelope.result : [];
   const modeLabel = SEARCH_MODE_LABEL[parsed.mode];
@@ -81,12 +82,12 @@ export function SearchPage() {
         <BoardResults boards={boardResults} />
       )}
 
-      {enabled && (page > 1 || results.length >= PAGE_SIZE) && (
+      {enabled && totalCount > PAGE_SIZE && (
         <PagePagination
           page={page}
           onPageChange={setPage}
-          pageLength={results.length}
           pageSize={PAGE_SIZE}
+          total={totalCount}
         />
       )}
     </div>
