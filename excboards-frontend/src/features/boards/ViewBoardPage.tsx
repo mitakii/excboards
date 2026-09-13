@@ -19,6 +19,7 @@ import type { RemoteExcalidrawElement } from "@excalidraw/excalidraw/data/reconc
 import "@excalidraw/excalidraw/index.css";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useTheme } from "@/components/theme-provider";
 import { getErrorMessage, getErrorStatus } from "@/lib/api";
 import { addRecentBoard } from "@/lib/recentBoards";
 import { useStatus } from "@/features/auth/queries";
@@ -99,6 +100,8 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
 
   const cannotEditRef = useRef(cannotEdit);
   cannotEditRef.current = cannotEdit;
+
+  const { resolvedTheme } = useTheme();
 
   const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null);
   const elementVersionsRef = useRef(new Map<string, number>());
@@ -410,6 +413,7 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
       </ExcalidrawMiscToolPortal>
 
       <Excalidraw
+        theme={resolvedTheme}
         renderTopRightUI={(isMobile) =>
           isMobile ? null : (
             <Button

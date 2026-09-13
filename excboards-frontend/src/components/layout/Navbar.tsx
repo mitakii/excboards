@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { LogOutIcon, PenSquareIcon, UserIcon } from "lucide-react";
+import { LogOutIcon, MoonIcon, PenSquareIcon, SunIcon, UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useTheme } from "@/components/theme-provider";
 import { useLogout, useStatus } from "@/features/auth/queries";
 import { BoardFormDialog } from "@/features/boards/components/BoardFormDialog";
 
@@ -22,10 +23,15 @@ export function Navbar({
   const { data: user } = useStatus();
   const logout = useLogout();
   const navigate = useNavigate();
+  const { resolvedTheme, setTheme } = useTheme();
 
   async function handleLogout() {
     await logout.mutateAsync();
     navigate("/");
+  }
+
+  function handleToggleTheme() {
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
   }
 
   return (
@@ -68,6 +74,19 @@ export function Navbar({
                   >
                     <UserIcon />
                     Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleToggleTheme}>
+                    {resolvedTheme === "dark" ? (
+                      <>
+                        <SunIcon />
+                        Light mode
+                      </>
+                    ) : (
+                      <>
+                        <MoonIcon />
+                        Dark mode
+                      </>
+                    )}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem

@@ -7,6 +7,7 @@ import { SEARCH_MODE_LABEL } from "./parseQuery";
 import { useSearch } from "./queries";
 import type { UserSearchResult } from "./api";
 import { BoardResults } from "./components/BoardResults";
+import { HomeSearch } from "./components/HomeSearch";
 import { UserResultCard } from "./components/ResultCards";
 
 const PAGE_SIZE = 12;
@@ -37,6 +38,8 @@ export function SearchPage() {
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-4 px-4 py-8">
+      <HomeSearch initialValue={raw} className="mx-auto max-w-xl" />
+
       <div>
         <h1 className="text-lg font-semibold text-foreground">
           {heading ? `${modeLabel} · ${heading}` : "Search"}

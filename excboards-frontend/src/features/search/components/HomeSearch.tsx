@@ -7,15 +7,27 @@ import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { SearchSuggestions } from "./SearchSuggestions";
 
 /**
- * Homepage search box: debounced suggestions drop into a panel that floats over
- * the page. Enter (or "see all") goes to the full /search results page.
+ * Search box: debounced suggestions drop into a panel that floats over the
+ * page. Enter (or "see all") goes to the full /search results page. Used both
+ * on the homepage and, pre-filled with the current query, atop the search
+ * results page itself so users can refine or start a new search.
  */
-export function HomeSearch({ className }: { className?: string }) {
-  const [value, setValue] = useState("");
+export function HomeSearch({
+  className,
+  initialValue = "",
+}: {
+  className?: string;
+  initialValue?: string;
+}) {
+  const [value, setValue] = useState(initialValue);
   const [open, setOpen] = useState(false);
   const debounced = useDebouncedValue(value, 300);
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setValue(initialValue);
+  }, [initialValue]);
 
   useEffect(() => {
     function onPointerDown(event: PointerEvent) {
