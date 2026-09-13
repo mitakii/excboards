@@ -22,9 +22,9 @@ export function RecentUsersList() {
     <SidebarMenu className="gap-1">
       {users.map((user) => (
         <SidebarMenuItem key={user.userId}>
-          <SidebarMenuButton asChild variant="outline">
+          <SidebarMenuButton asChild variant="outline" size="lg">
             <Link to={`/${user.username}`}>
-              <Avatar size="sm">
+              <Avatar>
                 <AvatarFallback>
                   {user.username.slice(0, 2).toUpperCase()}
                 </AvatarFallback>

@@ -14,12 +14,15 @@ interface SearchSuggestionsProps {
   onClose: () => void;
   /** Navigate to the full results page for the given query string. */
   onNavigateSearch: (query: string) => void;
+  /** Open the board overview dialog for a board result. */
+  onOpenOverview: (boardId: string) => void;
 }
 
 export function SearchSuggestions({
   query,
   onClose,
   onNavigateSearch,
+  onOpenOverview,
 }: SearchSuggestionsProps) {
   const { parsed, enabled, data, isLoading, isError, error, isFetching } =
     useSearch(query, 1, SUGGESTION_LIMIT);
@@ -70,7 +73,11 @@ export function SearchSuggestions({
               ))
             : (results as BoardSearchResult[]).map((board) => (
                 <li key={board.id}>
-                  <BoardResultCard board={board} onSelect={onClose} />
+                  <BoardResultCard
+                    board={board}
+                    onSelect={onClose}
+                    onOpenOverview={onOpenOverview}
+                  />
                 </li>
               ))}
         </ul>

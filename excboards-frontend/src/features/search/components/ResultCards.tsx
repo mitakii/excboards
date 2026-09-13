@@ -37,15 +37,23 @@ export function UserResultCard({
 export function BoardResultCard({
   board,
   onSelect,
+  onOpenOverview,
 }: {
   board: BoardSearchResult;
   onSelect?: () => void;
+  /** Open the board overview dialog for this board. Owned by an ancestor that
+   * outlives this card, since selecting a result also closes (unmounts) the
+   * suggestions panel this card lives in. */
+  onOpenOverview: (boardId: string) => void;
 }) {
   return (
-    <Link
-      to={`/boards/${board.id}`}
-      onClick={onSelect}
-      className={cn(cardBase, "items-start")}
+    <button
+      type="button"
+      onClick={() => {
+        onSelect?.();
+        onOpenOverview(board.id);
+      }}
+      className={cn(cardBase, "w-full items-start")}
     >
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-foreground">
@@ -66,6 +74,6 @@ export function BoardResultCard({
           </div>
         )}
       </div>
-    </Link>
+    </button>
   );
 }

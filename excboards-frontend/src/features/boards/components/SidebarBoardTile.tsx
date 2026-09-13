@@ -9,6 +9,7 @@ export function SidebarBoardTile({ id, name }: { id: string; name: string }) {
     <SidebarMenuItem>
       <SidebarMenuButton
         variant="outline"
+        size="lg"
         onClick={() => setOverviewOpen(true)}
       >
         <span className="truncate">{name}</span>

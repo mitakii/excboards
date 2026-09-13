@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SearchIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { BoardOverviewDialog } from "@/features/boards/components/BoardOverviewDialog";
 import { cn } from "@/lib/utils";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { SearchSuggestions } from "./SearchSuggestions";
@@ -21,6 +22,10 @@ export function HomeSearch({
 }) {
   const [value, setValue] = useState(initialValue);
   const [open, setOpen] = useState(false);
+  // Owned here, not by the suggestion card: picking a result closes (unmounts)
+  // the suggestions panel below, which would otherwise wipe out the dialog's
+  // open state before it ever got a chance to render.
+  const [overviewBoardId, setOverviewBoardId] = useState<string | null>(null);
   const debounced = useDebouncedValue(value, 300);
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -87,9 +92,18 @@ export function HomeSearch({
             query={debounced}
             onClose={() => setOpen(false)}
             onNavigateSearch={goToSearch}
+            onOpenOverview={setOverviewBoardId}
           />
         </div>
       )}
+
+      <BoardOverviewDialog
+        boardId={overviewBoardId ?? ""}
+        open={overviewBoardId !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setOverviewBoardId(null);
+        }}
+      />
     </div>
   );
 }
