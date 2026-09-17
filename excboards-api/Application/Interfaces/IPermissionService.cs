@@ -1,3 +1,5 @@
+using ErrorOr;
+
 namespace Application.Interfaces;
 
 public interface IPermissionService
@@ -7,4 +9,5 @@ public interface IPermissionService
     Task<bool> CanEditAsync(Guid userId, Guid boardId);
     Task<bool> IsOwnerAsync(Guid userId, Guid boardId);
     Task<bool> IsAdminAsync(Guid userId, Guid boardId);
+    Task<ErrorOr<bool>> SafeCheckEditPermissionAsync(Guid userId, Guid boardId);
 }

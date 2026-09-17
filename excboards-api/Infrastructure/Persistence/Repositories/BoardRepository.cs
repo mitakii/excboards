@@ -164,6 +164,13 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
             .AnyAsync(ub => ub.UserId == userId && ub.NormalizedName == name.ToLower());
     }
 
+    public Task<bool> ExistsByIdAsync(Guid boardId)
+    {
+        return context.UserBoards
+            .AsNoTracking()
+            .AnyAsync(ub => ub.Id == boardId);
+    }
+
     public Task<List<UserBoard>> GetByTagsAsync(IEnumerable<Tag> tags)
     {
         var tagIds = tags.Select(t => t.Id).ToList();

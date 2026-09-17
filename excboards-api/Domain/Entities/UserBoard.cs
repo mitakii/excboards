@@ -15,5 +15,6 @@ public class UserBoard
     public string Description { get; set; }
     
     public ICollection<Tag> Tags { get; set; } =  new HashSet<Tag>();
+    public ICollection<BoardThumbnail> BoardThumbnails { get; set; } =  new HashSet<BoardThumbnail>();
     public ICollection<BoardCollaborator> Collaborators { get; set; } = new List<BoardCollaborator>();
 }

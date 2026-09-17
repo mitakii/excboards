@@ -18,4 +18,5 @@ public interface IBoardRepository
     
     Task<List<UserBoard>> GetByTagsAsync(IEnumerable<Tag> tags);
     Task<bool> ExistsByNameAsync(Guid userId, string name);
+    Task<bool> ExistsByIdAsync(Guid boardId);
 }

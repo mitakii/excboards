@@ -1,4 +1,4 @@
-namespace excboards_api.Contracts.Boards;
+namespace excboards_api.Contracts;
 
 public class PagedRequest
 {

@@ -14,6 +14,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<UserProject> UserProjects => Set<UserProject>();
     public DbSet<Tag> Tags => Set<Tag>();
     public DbSet<BoardCollaborator> BoardCollaborators => Set<BoardCollaborator>();
+    public DbSet<BoardThumbnail> BoardThumbnails => Set<BoardThumbnail>();
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -45,6 +46,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             b.Property(x => x.Description).HasMaxLength(1000);
             
             b.HasQueryFilter(x => x.DeletedAt == null);
+        });
+
+        builder.Entity<BoardThumbnail>(p =>
+        {
+            p.HasIndex(x => new { x.BoardId, x.Position }).IsUnique();
         });
 
         builder.Entity<UserProject>(p =>

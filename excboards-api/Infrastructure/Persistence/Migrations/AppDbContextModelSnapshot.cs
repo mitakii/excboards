@@ -50,6 +50,29 @@ namespace Infrastructure.Persistence.Migrations
                     b.ToTable("BoardCollaborators");
                 });
 
+            modelBuilder.Entity("Domain.Entities.BoardThumbnail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BoardId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BoardId", "Position")
+                        .IsUnique();
+
+                    b.ToTable("BoardThumbnails");
+                });
+
             modelBuilder.Entity("Domain.Entities.Tag", b =>
                 {
                     b.Property<Guid>("Id")
@@ -431,6 +454,17 @@ namespace Infrastructure.Persistence.Migrations
                     b.Navigation("Board");
                 });
 
+            modelBuilder.Entity("Domain.Entities.BoardThumbnail", b =>
+                {
+                    b.HasOne("Domain.Entities.UserBoard", "Board")
+                        .WithMany("BoardThumbnails")
+                        .HasForeignKey("BoardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Board");
+                });
+
             modelBuilder.Entity("Domain.Entities.UserBoard", b =>
                 {
                     b.HasOne("Infrastructure.Identity.User", null)
@@ -543,6 +577,8 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Domain.Entities.UserBoard", b =>
                 {
+                    b.Navigation("BoardThumbnails");
+
                     b.Navigation("Collaborators");
                 });
 #pragma warning restore 612, 618

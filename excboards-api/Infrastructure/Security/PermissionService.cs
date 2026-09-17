@@ -1,5 +1,6 @@
 using Application.Interfaces;
 using Domain.Enums;
+using ErrorOr;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,6 +16,7 @@ public class PermissionService(AppDbContext context) : IPermissionService
             return true;
         return await GetAccessAsync(userId, boardId) is not null;
     }
+    
 
     public async Task<Dictionary<Guid, bool>?> CanViewAsync(Guid userId, List<Guid> boardIds) =>
         await GetViewAccessAsync(userId, boardIds);
@@ -39,6 +41,18 @@ public class PermissionService(AppDbContext context) : IPermissionService
         var result = await context.UserBoards.AsNoTracking().Where(b => b.Id == boardId).FirstOrDefaultAsync();
         return result is not null && result.IsPublished;
     }
+    
+    public async Task<ErrorOr<bool>> SafeCheckEditPermissionAsync(Guid userId, Guid boardId)
+    {
+        if(!await CanViewAsync(userId, boardId))
+            return Error.NotFound("Board.NotFound", "Board not found");
+
+        if (!await CanEditAsync(userId, boardId))
+            return Error.Forbidden("Board.Forbidden", "You do not have permission to edit this board.");
+
+        return true;
+    }
+    
     
     private async Task<AccessResult?> GetAccessAsync(Guid userId, Guid boardId)
     {

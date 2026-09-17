@@ -89,7 +89,7 @@ public static class InfrastructureServiceCollectionExtensions
             options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
         
         builder.Services.AddScoped<IBoardRepository, BoardRepository>();
-        
+        builder.Services.AddScoped<IThumbnailRepository, ThumbnailRepository>();
 
         return builder;
     }
@@ -102,6 +102,7 @@ public static class InfrastructureServiceCollectionExtensions
         builder.Services.AddScoped<BoardService>();
         builder.Services.AddScoped<IBoardCollaboratorRepository, BoardCollaboratorRepository>();
         builder.Services.AddScoped<BoardCollaboratorService>();
+        builder.Services.AddScoped<BoardThumbnailService>();
 
         return builder;
     }

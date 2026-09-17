@@ -1,5 +1,6 @@
 using Application.Boards;
 using Application.Dto;
+using excboards_api.Contracts;
 using excboards_api.Contracts.Boards;
 using excboards_api.Contracts.Search;
 using excboards_api.Extensions;

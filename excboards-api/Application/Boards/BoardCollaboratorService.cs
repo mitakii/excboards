@@ -78,10 +78,7 @@ public class BoardCollaboratorService(
     private async Task<Error?> AuthorizeAdminAsync(Guid requestingUserId, Guid boardId)
     {
         var board = await boardRepository.GetByIdAsync(boardId);
-        if (board is null)
-            return Error.NotFound("Board.NotFound", "Board not found");
-
-        if (!await permissionService.CanViewAsync(requestingUserId, boardId))
+        if (board is null || !await permissionService.CanViewAsync(requestingUserId, boardId))
             return Error.NotFound("Board.NotFound", "Board not found");
 
         if (!await permissionService.IsAdminAsync(requestingUserId, boardId))

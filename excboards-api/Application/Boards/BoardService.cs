@@ -134,10 +134,10 @@ public class BoardService(IBoardRepository boardRepository,
     public async Task<ErrorOr<long?>> SaveSceneAsync(Guid userId, Guid boardId, long sceneHash, Stream stream)
     {
         var board = await boardRepository.GetByIdAsync(boardId);
-        if (board == null)
+        if(board == null)
             return Error.NotFound("Board.NotFound", "Board not found");
-
-        var permission = await SafeCheckEditPermissionAsync(userId, board);
+        
+        var permission = await permissionService.SafeCheckEditPermissionAsync(userId, board.Id);
         if (permission.IsError)
             return permission.Errors;
         
@@ -157,10 +157,10 @@ public class BoardService(IBoardRepository boardRepository,
     {
         var board = await boardRepository.GetByIdAsync(boardId);
         if (board == null)
-            return  Error.NotFound("Board.NotFound", "Board not found");
+            return Error.NotFound("Board.NotFound", "Board not found");
         
-        var permission = await SafeCheckEditPermissionAsync(userId, board);
-        if(permission.IsError)
+        var permission = await permissionService.SafeCheckEditPermissionAsync(userId, board.Id);
+        if (permission.IsError)
             return permission.Errors;
 
         board.IsPublished = true;
@@ -175,8 +175,8 @@ public class BoardService(IBoardRepository boardRepository,
         if (board == null)
             return Error.NotFound("Board.NotFound", "Board not found");
         
-        var permission = await SafeCheckEditPermissionAsync(userId, board);
-        if(permission.IsError)
+        var permission = await permissionService.SafeCheckEditPermissionAsync(userId, board.Id);
+        if (permission.IsError)
             return permission.Errors;
         
         board.Description = string.IsNullOrWhiteSpace(dto.Description) ? board.Description : dto.Description;
@@ -210,6 +210,12 @@ public class BoardService(IBoardRepository boardRepository,
     {
         var board = await boardRepository.GetByIdAsync(boardId);
         
+        if(board == null)
+            return Error.NotFound("Board.NotFound", "Board not found");
+        
+        
+        if(!await permissionService.CanViewAsync(userId, boardId))
+            return Error.NotFound("Board.NotFound", "Board not found");
         if (!await permissionService.IsOwnerAsync(userId, boardId))
             return Error.Forbidden("Board.Forbidden", "You do not have permission to delete this board.");
 
@@ -222,7 +228,10 @@ public class BoardService(IBoardRepository boardRepository,
     {
         var board = await boardRepository.GetByIdAsync(boardId);
 
-        var permission = await SafeCheckEditPermissionAsync(userId, board);
+        if(board == null)
+            return Error.NotFound("Board.NotFound", "Board not found");
+        
+        var permission = await permissionService.SafeCheckEditPermissionAsync(userId, board.Id);
         if (permission.IsError)
             return permission.Errors;
 
@@ -237,7 +246,10 @@ public class BoardService(IBoardRepository boardRepository,
     {
         var board = await boardRepository.GetByIdAsync(boardId);
 
-        var permission = await SafeCheckEditPermissionAsync(userId, board);
+        if(board == null)
+            return Error.NotFound("Board.NotFound", "Board not found");
+        
+        var permission = await permissionService.SafeCheckEditPermissionAsync(userId, board.Id);
         if (permission.IsError)
             return permission.Errors;
 
@@ -246,17 +258,6 @@ public class BoardService(IBoardRepository boardRepository,
 
         await boardRepository.UpdateAsync(board);
         return Result.Updated;
-    }
-
-    private async Task<ErrorOr<bool>> SafeCheckEditPermissionAsync(Guid userId, UserBoard? board)
-    {
-        if(board == null || !await permissionService.CanViewAsync(userId, board.Id))
-            return Error.NotFound("Board.NotFound", "Board not found");
-
-        if (!await permissionService.CanEditAsync(userId, board.Id))
-            return Error.Forbidden("Board.Forbidden", "You do not have permission to edit this board.");
-
-        return true;
     }
 
     public async Task<ErrorOr<PagedResult<UserBoardDto>>> GetUserBoards(Guid requestUserId, Guid currentUserId, int pageNumber, int pageSize)
