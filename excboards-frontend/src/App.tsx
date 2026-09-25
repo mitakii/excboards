@@ -7,6 +7,7 @@ import { HomePage } from "@/features/home/HomePage";
 import { SearchPage } from "@/features/search/SearchPage";
 import { ProfilePage } from "@/features/profile/ProfilePage";
 import { ViewBoardPage } from "@/features/boards/ViewBoardPage";
+import { SettingsPage } from "@/features/settings/SettingsPage";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route path="boards/:id" element={<ViewBoardPage />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
 
           <Route path=":username" element={<ProfilePage />} />

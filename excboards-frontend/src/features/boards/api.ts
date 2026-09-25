@@ -84,6 +84,55 @@ export async function publishBoard(id: string) {
   await api.patch(`/api/boards/publish/${id}`);
 }
 
+export interface BoardThumbnail {
+  boardId: string;
+  position: number;
+  uploadUrl?: string;
+  downloadUrl?: string;
+}
+
+/** Mirrors backend Application.Boards.BoardThumbnailService.MaxThumbnails. */
+export const MAX_BOARD_THUMBNAILS = 5;
+
+export async function addBoardThumbnail(boardId: string) {
+  const res = await api.post<BoardThumbnail>(`/api/thumbnail/${boardId}`);
+  return res.data;
+}
+
+export async function listBoardThumbnails(boardId: string) {
+  const res = await api.get<BoardThumbnail[]>(`/api/thumbnail/${boardId}`);
+  return res.data;
+}
+
+export async function uploadBoardThumbnail(boardId: string, file: File) {
+  const { uploadUrl } = await addBoardThumbnail(boardId);
+  if (!uploadUrl) throw new Error("No upload URL returned for thumbnail.");
+  await fetch(uploadUrl, {
+    method: "PUT",
+    body: file,
+    headers: { "Content-Type": file.type },
+  });
+}
+
+export async function getBoardThumbnail(
+  boardId: string,
+  position = 1
+): Promise<BoardThumbnail | null> {
+  try {
+    const res = await api.get<BoardThumbnail>(
+      `/api/thumbnail/${boardId}/${position}`
+    );
+    return res.data;
+  } catch (err) {
+    if (isAxiosError(err) && err.response?.status === 404) return null;
+    throw err;
+  }
+}
+
+export async function deleteBoardThumbnail(boardId: string, position: number) {
+  await api.delete(`/api/thumbnail/${boardId}/${position}`);
+}
+
 export async function getUploadUrl(boardId: string, fileId: string) {
   const res = await api.get<string>(
     `/api/boards/${boardId}/uploadUrl/${fileId}`

@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import {
   ArrowRightIcon,
   GlobeIcon,
   LockIcon,
   PencilIcon,
+  UserMinusIcon,
   UserPlusIcon,
   XIcon,
 } from "lucide-react";
@@ -30,6 +32,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useStatus } from "@/features/auth/queries";
 import { useUserById } from "@/features/profile/queries";
 import { getErrorMessage } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { PermissionLevel } from "../api";
 import {
   useBoard,
@@ -42,6 +45,8 @@ import {
 import { AddCollaboratorsDialog } from "./AddCollaboratorsDialog";
 import { PERMISSION_NAME_TO_LEVEL, PermissionSelect } from "./PermissionSelect";
 import { TagBadgeEditor } from "./TagBadgeEditor";
+import { BoardThumbnailStrip } from "./BoardThumbnailStrip";
+import { ThumbnailEditor } from "./ThumbnailEditor";
 
 interface BoardOverviewDialogProps {
   boardId: string;
@@ -126,12 +131,13 @@ function BoardOverviewContent({ boardId }: { boardId: string }) {
     setEditing(true);
   }
 
-  function handlePublish() {
-    setError(null);
-    publishBoard.mutate(boardId, {
-      onError: (err) =>
-        setError(getErrorMessage(err, "Failed to publish board.")),
-    });
+  async function handlePublish() {
+    try {
+      await publishBoard.mutateAsync(boardId);
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to publish board."));
+      throw err;
+    }
   }
 
   async function handleSave() {
@@ -156,7 +162,11 @@ function BoardOverviewContent({ boardId }: { boardId: string }) {
         <DialogHeader>
           <DialogTitle>Edit board</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
+          <Field>
+            <FieldLabel>Thumbnails</FieldLabel>
+            <ThumbnailEditor boardId={boardId} />
+          </Field>
           <Field>
             <FieldLabel htmlFor="board-overview-name">Board name</FieldLabel>
             <Input
@@ -222,7 +232,10 @@ function BoardOverviewContent({ boardId }: { boardId: string }) {
       )}
 
       <DialogHeader>
-        <DialogTitle className="wrap-anywhere">{data.name}</DialogTitle>
+        {/* Reserve room for the absolute close (and edit) buttons in the corner. */}
+        <DialogTitle className={cn("wrap-anywhere", canEdit ? "pr-14" : "pr-6")}>
+          {data.name}
+        </DialogTitle>
       </DialogHeader>
 
       <div className="min-w-0 space-y-4">
@@ -256,6 +269,10 @@ function BoardOverviewContent({ boardId }: { boardId: string }) {
           )}
         </div>
 
+        <div className="group">
+          <BoardThumbnailStrip boardId={boardId} className="h-64 w-full rounded-lg" />
+        </div>
+
         {(data.tags ?? []).length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {data.tags.map((tag) => (
@@ -278,6 +295,8 @@ function BoardOverviewContent({ boardId }: { boardId: string }) {
             </Badge>
           ) : canEdit ? (
             <ConfirmDialog
+              size="sm"
+              icon={<GlobeIcon />}
               title="Publish this board?"
               description="Anyone will be able to find and view it. Publishing can't be undone."
               confirmLabel="Publish"
@@ -410,14 +429,30 @@ function BoardOverviewContent({ boardId }: { boardId: string }) {
                     )}
                     {canManageCollaborators && (
                       <ConfirmDialog
+                        size="sm"
+                        icon={<UserMinusIcon />}
                         title="Remove collaborator?"
-                        description={`${
-                          collaborator.username || "This user"
-                        } will lose access to this board.`}
-                        confirmLabel="Remove"
-                        onConfirm={() =>
-                          removeCollaborator.mutate(collaborator.userId)
+                        description={
+                          <>
+                            <span className="font-medium text-foreground">
+                              {collaborator.username || "This user"}
+                            </span>{" "}
+                            will lose access to this board.
+                          </>
                         }
+                        confirmLabel="Remove"
+                        onConfirm={async () => {
+                          try {
+                            await removeCollaborator.mutateAsync(
+                              collaborator.userId
+                            );
+                          } catch (err) {
+                            toast.error(
+                              getErrorMessage(err, "Couldn't remove collaborator.")
+                            );
+                            throw err;
+                          }
+                        }}
                         trigger={
                           <Button
                             size="icon-xs"

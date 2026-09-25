@@ -22,14 +22,14 @@ export function RecentlyViewedSection() {
     };
   });
 
+  if (items.length === 0) return null;
+
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold text-foreground">Recently viewed</h2>
-      <BoardList
-        boards={items}
-        layout="list"
-        emptyMessage="You haven't viewed any boards yet."
-      />
+      <h2 className="text-lg font-semibold text-foreground">
+        Recently viewed
+      </h2>
+      <BoardList boards={items} emptyMessage="" />
     </section>
   );
 }

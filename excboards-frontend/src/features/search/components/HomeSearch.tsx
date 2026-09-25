@@ -7,12 +7,6 @@ import { cn } from "@/lib/utils";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { SearchSuggestions } from "./SearchSuggestions";
 
-/**
- * Search box: debounced suggestions drop into a panel that floats over the
- * page. Enter (or "see all") goes to the full /search results page. Used both
- * on the homepage and, pre-filled with the current query, atop the search
- * results page itself so users can refine or start a new search.
- */
 export function HomeSearch({
   className,
   initialValue = "",
@@ -22,9 +16,6 @@ export function HomeSearch({
 }) {
   const [value, setValue] = useState(initialValue);
   const [open, setOpen] = useState(false);
-  // Owned here, not by the suggestion card: picking a result closes (unmounts)
-  // the suggestions panel below, which would otherwise wipe out the dialog's
-  // open state before it ever got a chance to render.
   const [overviewBoardId, setOverviewBoardId] = useState<string | null>(null);
   const debounced = useDebouncedValue(value, 300);
   const navigate = useNavigate();

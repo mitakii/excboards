@@ -13,7 +13,9 @@ export function RecommendedByTagSection() {
 
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold text-foreground">Recommended for you</h2>
+      <h2 className="text-lg font-semibold text-foreground">
+        Recommended for you
+      </h2>
       <div className="flex flex-wrap gap-2">
         <Button
           size="sm"
@@ -33,7 +35,10 @@ export function RecommendedByTagSection() {
           </Button>
         ))}
       </div>
-      <BoardList boards={boards} layout="list" emptyMessage="No boards for this tag yet." />
+      <BoardList
+        boards={boards}
+        emptyMessage="No boards for this tag yet."
+      />
     </section>
   );
 }

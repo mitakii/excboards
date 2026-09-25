@@ -6,11 +6,6 @@ interface ClampTextProps extends React.ComponentProps<"p"> {
   lines?: number;
 }
 
-/**
- * Renders text that shows in full up to `lines` lines. If it would overflow,
- * it stays capped at `lines` and fades out at the bottom instead of showing an
- * ellipsis. The fade is only applied once the text is actually truncated.
- */
 export function ClampText({
   lines = 3,
   className,

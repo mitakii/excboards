@@ -25,7 +25,6 @@ export function BoardResults({ boards }: { boards: BoardSearchResult[] }) {
   return (
     <BoardList
       boards={items}
-      layout="list"
       emptyMessage="No boards match your search."
     />
   );

@@ -27,32 +27,54 @@ export function getReferencedFileIds(elements: readonly ExcalidrawElement[]): st
 export async function uploadBoardFile(boardId: string, file: BinaryFileData) {
   const uploadUrl = await boardsApi.getUploadUrl(boardId, file.id);
   const blob = await dataURLToBlob(file.dataURL);
-  await fetch(uploadUrl, {
+  const res = await fetch(uploadUrl, {
     method: "PUT",
     body: blob,
     headers: { "Content-Type": file.mimeType },
   });
+  if (!res.ok) throw new Error(`Upload of file ${file.id} failed with ${res.status}`);
 }
 
-export async function hydrateBoardFiles(boardId: string, fileIds: string[], excalidrawApi: ExcalidrawImperativeAPI) {
-  if (fileIds.length === 0) return;
+// A remote peer broadcasts an image element before its upload finishes, so the
+// object may not exist yet (NoSuchKey) — retry with backoff before giving up.
+const HYDRATE_RETRY_DELAYS_MS = [500, 1000, 2000, 4000, 8000];
 
-  const urls = await boardsApi.getDownloadUrls(boardId, fileIds);
-  const files = await Promise.all(
-    Object.entries(urls).map(async ([id, url]): Promise<BinaryFileData | null> => {
-      const res = await fetch(url);
-      if (!res.ok) return null;
-      const blob = await res.blob();
-      const dataURL = await blobToDataURL(blob);
-      return {
-        id: id as FileId,
-        dataURL,
-        mimeType: (blob.type || "application/octet-stream") as BinaryFileData["mimeType"],
-        created: Date.now(),
-      };
-    }),
-  );
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  const loaded = files.filter((file): file is BinaryFileData => file != null);
-  if (loaded.length > 0) excalidrawApi.addFiles(loaded);
+// Returns the file ids that could not be loaded after all retries.
+export async function hydrateBoardFiles(
+  boardId: string,
+  fileIds: string[],
+  excalidrawApi: ExcalidrawImperativeAPI,
+): Promise<string[]> {
+  let pending = fileIds;
+
+  for (let attempt = 0; pending.length > 0; attempt++) {
+    const urls = await boardsApi.getDownloadUrls(boardId, pending);
+    const results = await Promise.all(
+      pending.map(async (id): Promise<BinaryFileData | null> => {
+        const url = urls[id];
+        if (!url) return null;
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const blob = await res.blob();
+        const dataURL = await blobToDataURL(blob);
+        return {
+          id: id as FileId,
+          dataURL,
+          mimeType: (blob.type || "application/octet-stream") as BinaryFileData["mimeType"],
+          created: Date.now(),
+        };
+      }),
+    );
+
+    const loaded = results.filter((file): file is BinaryFileData => file != null);
+    if (loaded.length > 0) excalidrawApi.addFiles(loaded);
+
+    pending = pending.filter((_, i) => results[i] == null);
+    if (pending.length === 0 || attempt >= HYDRATE_RETRY_DELAYS_MS.length) break;
+    await sleep(HYDRATE_RETRY_DELAYS_MS[attempt]);
+  }
+
+  return pending;
 }

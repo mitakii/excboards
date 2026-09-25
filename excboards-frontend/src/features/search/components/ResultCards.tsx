@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import type { BoardSearchResult, UserSearchResult } from "../api";
 
 const cardBase =
-  "flex items-center gap-3 rounded-xl border border-border bg-card p-3 text-left transition-colors hover:bg-muted/50";
+  "flex items-center gap-3 rounded-xl border border-border bg-card p-3 text-left transition-all hover:bg-muted/50 hover:shadow-sm";
 
 export function UserResultCard({
   user,
@@ -41,9 +41,6 @@ export function BoardResultCard({
 }: {
   board: BoardSearchResult;
   onSelect?: () => void;
-  /** Open the board overview dialog for this board. Owned by an ancestor that
-   * outlives this card, since selecting a result also closes (unmounts) the
-   * suggestions panel this card lives in. */
   onOpenOverview: (boardId: string) => void;
 }) {
   return (

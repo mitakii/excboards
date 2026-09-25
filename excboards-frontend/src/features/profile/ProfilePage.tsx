@@ -57,15 +57,14 @@ export function ProfilePage() {
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-8">
-      <ProfileInfoCard profile={profile.data} />
+      <ProfileInfoCard profile={profile.data} isOwnProfile={isOwnProfile} />
 
       <div className="min-w-0 space-y-4">
         <h2 className="text-lg font-semibold text-foreground">Boards</h2>
         <BoardList
           boards={items}
-          layout="list"
           emptyMessage="No boards yet."
-          onDelete={isOwnProfile ? (id) => deleteBoard.mutate(id) : undefined}
+          onDelete={isOwnProfile ? (id) => deleteBoard.mutateAsync(id) : undefined}
         />
         {(boards.data?.totalCount ?? 0) > PAGE_SIZE && (
           <PagePagination

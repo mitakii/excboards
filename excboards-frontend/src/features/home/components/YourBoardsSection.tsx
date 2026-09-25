@@ -1,5 +1,9 @@
 import { useState } from "react";
+import { PenSquareIcon } from "lucide-react";
 import { PagePagination } from "@/components/PagePagination";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { BoardFormDialog } from "@/features/boards/components/BoardFormDialog";
 import { BoardList } from "@/features/boards/components/BoardList";
 import type { BoardCardData } from "@/features/boards/components/BoardCard";
 import { useUserBoards, useDeleteBoard } from "@/features/boards/queries";
@@ -22,15 +26,42 @@ export function YourBoardsSection({ user }: { user: AuthUser }) {
     isPublished: board.isPublished,
   }));
 
+  const isEmpty = boards.isSuccess && items.length === 0;
+
   return (
     <section className="space-y-3">
       <h2 className="text-lg font-semibold text-foreground">Your boards</h2>
-      <BoardList
-        boards={items}
-        layout="list"
-        emptyMessage="You haven't created any boards yet."
-        onDelete={(id) => deleteBoard.mutate(id)}
-      />
+      {isEmpty ? (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+            <div className="rounded-full bg-muted p-3">
+              <PenSquareIcon className="size-6 text-muted-foreground" />
+            </div>
+            <div className="space-y-1">
+              <p className="font-medium text-foreground">
+                You haven&apos;t created any boards yet
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Start a canvas to sketch, diagram, or plan with your team.
+              </p>
+            </div>
+            <BoardFormDialog
+              trigger={
+                <Button size="sm">
+                  <PenSquareIcon />
+                  Create your first board
+                </Button>
+              }
+            />
+          </CardContent>
+        </Card>
+      ) : (
+        <BoardList
+          boards={items}
+          emptyMessage="You haven't created any boards yet."
+          onDelete={(id) => deleteBoard.mutateAsync(id)}
+        />
+      )}
       {(boards.data?.totalCount ?? 0) > PAGE_SIZE && (
         <PagePagination
           page={page}

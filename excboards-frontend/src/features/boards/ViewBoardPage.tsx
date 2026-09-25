@@ -111,6 +111,12 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
   const liveElementIdsRef = useRef(new Set<string>());
 
   const knownFileIdsRef = useRef(new Set<string>());
+
+  // Let a later scene update retry files that never became available.
+  const forgetFailedFileIds = useCallback((failedIds: string[]) => {
+    for (const id of failedIds) knownFileIdsRef.current.delete(id);
+  }, []);
+
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Hashes this client pushed, so its own `SceneSaved` echoes don't trigger a
   // self-refetch (which would clobber edits made since the save fired).
@@ -180,14 +186,16 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
       );
       if (missingFileIds.length > 0) {
         for (const id of missingFileIds) knownFileIdsRef.current.add(id);
-        hydrateBoardFiles(boardId, missingFileIds, excalidrawApi).catch(
+        hydrateBoardFiles(boardId, missingFileIds, excalidrawApi)
+          .then(forgetFailedFileIds)
+          .catch(
           (err) => {
             console.error("Failed to load board files", err);
           }
         );
       }
     },
-    [boardId]
+    [boardId, forgetFailedFileIds]
   );
 
   // handled by socket which called after board scene saved
@@ -248,14 +256,16 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
       );
       if (missingFileIds.length > 0) {
         for (const id of missingFileIds) knownFileIdsRef.current.add(id);
-        hydrateBoardFiles(boardId, missingFileIds, excalidrawApi).catch(
+        hydrateBoardFiles(boardId, missingFileIds, excalidrawApi)
+          .then(forgetFailedFileIds)
+          .catch(
           (err) => {
             console.error("Failed to load board files", err);
           }
         );
       }
     },
-    [boardId, queryClient, scheduleSave]
+    [boardId, queryClient, scheduleSave, forgetFailedFileIds]
   );
 
   const { broadcastElements } = useCanvasHub(
@@ -440,7 +450,9 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
           const referencedFileIds = getReferencedFileIds(initialElements);
           for (const id of referencedFileIds) knownFileIdsRef.current.add(id);
           if (referencedFileIds.length > 0) {
-            hydrateBoardFiles(boardId, referencedFileIds, excalidrawApi).catch(
+            hydrateBoardFiles(boardId, referencedFileIds, excalidrawApi)
+              .then(forgetFailedFileIds)
+              .catch(
               (err) => {
                 console.error("Failed to load board files", err);
               }

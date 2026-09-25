@@ -39,6 +39,42 @@ export function useBoard(id: string | undefined) {
   });
 }
 
+export function useBoardThumbnail(id: string | undefined, position = 1) {
+  return useQuery({
+    queryKey: ["boards", id, "thumbnail", position],
+    queryFn: () => boardsApi.getBoardThumbnail(id!, position),
+    enabled: !!id,
+    staleTime: 60_000,
+  });
+}
+
+export function useBoardThumbnails(id: string | undefined) {
+  return useQuery({
+    queryKey: ["boards", id, "thumbnails"],
+    queryFn: () => boardsApi.listBoardThumbnails(id!),
+    enabled: !!id,
+  });
+}
+
+export function useAddBoardThumbnail(boardId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => boardsApi.uploadBoardThumbnail(boardId, file),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["boards", boardId] }),
+  });
+}
+
+export function useDeleteBoardThumbnail(boardId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (position: number) =>
+      boardsApi.deleteBoardThumbnail(boardId, position),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["boards", boardId] }),
+  });
+}
+
 export function useBoardScene(id: string | undefined) {
   return useQuery({
     queryKey: ["boards", id, "scene"],
