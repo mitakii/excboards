@@ -10,6 +10,24 @@ public class PermissionService(AppDbContext context) : IPermissionService
 {
     private readonly record struct AccessResult(bool IsOwner, PermissionLevel? CollaboratorPermission);
 
+    public async Task<bool> UserWorldBoardIsBannedAsync(Guid userId)
+    {
+        var user = await context.Users.AsNoTracking().FirstOrDefaultAsync(b => b.Id == userId);
+        if(user is null or {IsBanned:false}) return false;
+        return true;
+    }
+
+    public Task<bool> WorldBoardExistsAsync(Guid boardId)
+        => context.WorldBoards.AsNoTracking().AnyAsync(b => b.Id == boardId);
+
+    public async Task<bool> CanEditWorldBoardAsync(Guid userId, Guid boardId)
+    {
+        var board = await context.WorldBoards.AsNoTracking().FirstOrDefaultAsync(b => b.Id == boardId);
+        if (board is null || board.IsArchived(DateTime.UtcNow))
+            return false;
+        return !await UserWorldBoardIsBannedAsync(userId);
+    }
+
     public async Task<bool> CanViewAsync(Guid userId, Guid boardId)
     {
         if(await BoardIsPublicAsync(boardId))

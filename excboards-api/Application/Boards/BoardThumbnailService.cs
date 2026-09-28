@@ -29,7 +29,7 @@ public class BoardThumbnailService(IFileRepository fileRepository,
         }
         catch (TooManyThumbnailsException)
         {
-            return Error.Failure("Board.Thumbnails", "Too many thumbnails");
+            return Error.Conflict("Board.Thumbnails", "Too many thumbnails");
         }
 
         var uploadUrl = await fileRepository
@@ -60,6 +60,32 @@ public class BoardThumbnailService(IFileRepository fileRepository,
     }
     
     
+    // list all thumbnails for a board with their presigned download links
+    public async Task<ErrorOr<List<BoardThumbnailDto>>> GetBoardThumbnailsAsync(Guid userId, Guid boardId)
+    {
+        if (!await permissionService.CanViewAsync(userId, boardId))
+            return Error.NotFound("Board.Thumbnails", "Board not found");
+
+        var thumbnails = await thumbnailRepository.GetBoardThumbnailsAsync(boardId);
+
+        var dtos = new List<BoardThumbnailDto>();
+        foreach (var thumbnail in thumbnails.OrderBy(t => t.Position))
+        {
+            var downloadUrl = await fileRepository
+                .GetDownloadUrlAsync(BoardFileKeys.Thumbnail(boardId, thumbnail.Id),
+                    TimeSpan.FromMinutes(10));
+
+            dtos.Add(new BoardThumbnailDto
+            {
+                BoardId = boardId,
+                Position = thumbnail.Position,
+                DownloadUrl = downloadUrl,
+            });
+        }
+
+        return dtos;
+    }
+
     // get thumbnail presigned download link
     public async Task<ErrorOr<BoardThumbnailDto>> GetBoardThumbnailAsync(Guid userId, Guid boardId, int position)
     {

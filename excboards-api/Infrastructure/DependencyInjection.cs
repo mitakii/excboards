@@ -3,6 +3,8 @@ using Application.Boards;
 using Application.Interfaces;
 using Application.Storage;
 using Application.Tags;
+using Application.WorldBoards;
+using Application.WorldBoards;
 using BusinessLayer.DTO;
 using Domain.Interfaces;
 using Infrastructure.Identity;
@@ -90,6 +92,7 @@ public static class InfrastructureServiceCollectionExtensions
         
         builder.Services.AddScoped<IBoardRepository, BoardRepository>();
         builder.Services.AddScoped<IThumbnailRepository, ThumbnailRepository>();
+        builder.Services.AddScoped<IWorldBoardRepository, WorldBoardRepository>();
 
         return builder;
     }
@@ -103,6 +106,8 @@ public static class InfrastructureServiceCollectionExtensions
         builder.Services.AddScoped<IBoardCollaboratorRepository, BoardCollaboratorRepository>();
         builder.Services.AddScoped<BoardCollaboratorService>();
         builder.Services.AddScoped<BoardThumbnailService>();
+        builder.Services.AddScoped<WorldBoardService>();
+        builder.Services.AddScoped<WorldBoardService>();
 
         return builder;
     }

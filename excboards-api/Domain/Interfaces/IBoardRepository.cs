@@ -11,6 +11,7 @@ public interface IBoardRepository
     Task UpdateAsync(UserBoard board);
     
     Task<UserBoard?> GetByIdAsync(Guid id);
+    Task<PagedResult<UserBoard>> GetLatestPagedAsync(Guid userId, int pageNumber, int pageSize);
     Task<List<UserBoard>> GetAllByUserIdAsync(Guid userId);
     Task<PagedResult<UserBoard>> GetAllByUserIdPagedAsync(Guid requestedUserId,Guid currentUserId, int pageNumber, int pageSize);
     Task<PagedResult<UserBoard>> SearchAsync(Guid currentUserId, string query, int page = 1, int pageSize = 10);

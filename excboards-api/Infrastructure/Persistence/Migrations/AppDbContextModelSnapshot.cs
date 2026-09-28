@@ -177,6 +177,32 @@ namespace Infrastructure.Persistence.Migrations
                     b.ToTable("UserProjects");
                 });
 
+            modelBuilder.Entity("Domain.Entities.WorldBoard", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("CreatedAt")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsReadOnly")
+                        .HasColumnType("boolean");
+
+                    b.Property<long>("SceneHash")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .IsUnique();
+
+                    b.ToTable("WorldBoards");
+                });
+
             modelBuilder.Entity("Infrastructure.Identity.RefreshToken", b =>
                 {
                     b.Property<string>("Id")
@@ -226,6 +252,9 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(256)");
 
                     b.Property<bool>("EmailConfirmed")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsBanned")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("LockoutEnabled")

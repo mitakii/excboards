@@ -119,6 +119,19 @@ public class BoardService(IBoardRepository boardRepository,
         return board.MapToDto();
     }
 
+    public async Task<ErrorOr<PagedResult<UserBoardDto>>> GetLatestBoardsAsync(Guid userId, int page, int pageSize)
+    {
+        var result = await boardRepository.GetLatestPagedAsync(userId, page, pageSize);
+
+        return new PagedResult<UserBoardDto>()
+        {
+            Data = result.Data.MapToDto(),
+            Page = page,
+            PageSize = pageSize,
+            Total = result.Total
+        };
+    }
+
     public async Task<ErrorOr<Stream>> GetSceneAsync(Guid userId, Guid boardId)
     {
         var board = await boardRepository.GetByIdAsync(boardId);

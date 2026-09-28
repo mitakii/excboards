@@ -6,4 +6,5 @@ public class User : IdentityUser<Guid>
 {
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public string ProfilePictureUrl { get; set; } = string.Empty;
+    public bool IsBanned { get; set; } = false;
 }

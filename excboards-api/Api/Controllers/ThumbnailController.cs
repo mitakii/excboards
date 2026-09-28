@@ -19,6 +19,16 @@ public class ThumbnailController(BoardThumbnailService thumbnailService) : Contr
         return Ok(result.Value);
     }
 
+    [HttpGet("{boardId:guid}")]
+    public async Task<IActionResult> GetBoardThumbnailsAsync(Guid boardId)
+    {
+        var result = await thumbnailService.GetBoardThumbnailsAsync(User.GetUserId(), boardId);
+        if (result.IsError)
+            return result.ToProblem(this);
+
+        return Ok(result.Value);
+    }
+
     [HttpGet("{boardId:guid}/{position:int}")]
     public async Task<IActionResult> GetBoardThumbnailAsync(Guid boardId, int position)
     {

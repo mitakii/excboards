@@ -84,6 +84,25 @@ public class BoardsController
             result.Value.PageSize)
         );
     }
+
+    [HttpGet("latest")]
+    public async Task<IActionResult> GetLatestBoards([FromQuery] PagedRequest request)
+    {
+        if(request.Page == 0 ||  request.PageSize == 0)
+            return BadRequest();
+        
+        var result = await boardService
+            .GetLatestBoardsAsync(User.GetUserId(), request.Page, request.PageSize);
+        if(result.IsError)
+            return result.ToProblem(this);
+
+        return Ok(new SearchResponse<BoardResponse>(
+            result.Value.Data.MapToResponse(),
+            result.Value.Total,
+            result.Value.Page,
+            result.Value.PageSize)
+        );
+    }
     
     [HttpGet("{boardId:guid}")]
     public async Task<IActionResult> GetById(Guid boardId)

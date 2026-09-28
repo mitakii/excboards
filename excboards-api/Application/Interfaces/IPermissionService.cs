@@ -4,6 +4,9 @@ namespace Application.Interfaces;
 
 public interface IPermissionService
 {
+    Task<bool> UserWorldBoardIsBannedAsync(Guid userId);
+    Task<bool> WorldBoardExistsAsync(Guid boardId);
+    Task<bool> CanEditWorldBoardAsync(Guid userId, Guid boardId);
     Task<bool> CanViewAsync(Guid userId, Guid boardId);
     Task<Dictionary<Guid, bool>?> CanViewAsync(Guid userId, List<Guid> boardIds);
     Task<bool> CanEditAsync(Guid userId, Guid boardId);

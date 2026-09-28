@@ -15,9 +15,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Tag> Tags => Set<Tag>();
     public DbSet<BoardCollaborator> BoardCollaborators => Set<BoardCollaborator>();
     public DbSet<BoardThumbnail> BoardThumbnails => Set<BoardThumbnail>();
+    public DbSet<WorldBoard> WorldBoards => Set<WorldBoard>();
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        builder.Entity<WorldBoard>(wb =>
+        {
+            wb.HasIndex(x =>  x.CreatedAt).IsUnique();
+            wb.HasQueryFilter(x => x.DeletedAt == null);
+        });
 
         builder.Entity<RefreshToken>(rt =>
         {

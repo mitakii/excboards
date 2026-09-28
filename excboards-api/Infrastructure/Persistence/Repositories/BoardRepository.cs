@@ -61,6 +61,33 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
             .FirstOrDefaultAsync(ub => ub.Id == id);
     }
 
+    public async Task<PagedResult<UserBoard>> GetLatestPagedAsync(Guid userId, int pageNumber, int pageSize)
+    {
+        var q = context.UserBoards
+            .AsNoTracking()
+            .Include(ub => ub.Tags)
+            .AsSplitQuery()
+            .Where(ub => ub.IsPublished ||
+                         userId == ub.UserId ||
+                         ub.Collaborators.Any(c => c.UserId == userId))
+            .OrderByDescending(ub => ub.Created)
+            .ThenByDescending(ub => ub.Id);
+
+        var total = await q.CountAsync();
+            
+        var data = await q.Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return new PagedResult<UserBoard>()
+        {
+            Data = data,
+            Page = pageNumber,
+            PageSize = pageSize,
+            Total = total,
+        };
+    }
+
     public Task<List<UserBoard>> GetAllByUserIdAsync(Guid userId)
     {
         return context.UserBoards
@@ -79,8 +106,8 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
                          (ub.IsPublished ||
                           currentUserId == ub.UserId ||
                           ub.Collaborators.Any(c => c.UserId == currentUserId)))
-            .OrderBy(ub => ub.Created)
-            .ThenBy(ub => ub.Id);
+            .OrderByDescending(ub => ub.Created)
+            .ThenByDescending(ub => ub.Id);
         
         var count = await q.CountAsync();
             
