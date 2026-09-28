@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from "react";
 import {
+  keepPreviousData,
   useMutation,
   useQueries,
   useQuery,
@@ -91,12 +92,14 @@ export function useSaveScene() {
       scene,
       sceneHash,
       kind,
+      base,
     }: {
       id: string;
       scene: Blob;
       sceneHash: number;
       kind?: boardsApi.SceneSaveKind;
-    }) => boardsApi.saveScene(id, scene, sceneHash, kind),
+      base?: boardsApi.SceneApiBase;
+    }) => boardsApi.saveScene(id, scene, sceneHash, kind, base),
   });
 }
 
@@ -109,6 +112,14 @@ export function useUserBoards(
     queryKey: ["boards", "u", userId, page, pageSize],
     queryFn: () => boardsApi.listUserBoards(userId!, page, pageSize),
     enabled: !!userId,
+  });
+}
+
+export function useLatestBoards(page: number, pageSize: number) {
+  return useQuery({
+    queryKey: ["boards", "latest", page, pageSize],
+    queryFn: () => boardsApi.listLatestBoards(page, pageSize),
+    placeholderData: keepPreviousData,
   });
 }
 

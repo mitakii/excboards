@@ -8,6 +8,7 @@ import { SearchPage } from "@/features/search/SearchPage";
 import { ProfilePage } from "@/features/profile/ProfilePage";
 import { ViewBoardPage } from "@/features/boards/ViewBoardPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
+import { WorldBoardPage } from "@/features/worldBoard/WorldBoardPage";
 
 function App() {
   return (
@@ -18,6 +19,8 @@ function App() {
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<RegisterPage />} />
           <Route path="search" element={<SearchPage />} />
+          <Route path="world" element={<WorldBoardPage />} />
+          <Route path="world/:id" element={<WorldBoardPage />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path="boards/:id" element={<ViewBoardPage />} />

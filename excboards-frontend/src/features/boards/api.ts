@@ -2,6 +2,10 @@ import type { ExcalidrawInitialDataState } from "@excalidraw/excalidraw/types";
 import { isAxiosError } from "axios";
 import { api, type PagedEnvelope } from "@/lib/api";
 
+/** Board-like resources sharing the scene/file endpoint shape. */
+export type SceneApiBase = "/api/boards" | "/api/worldboard";
+export const BOARDS_API: SceneApiBase = "/api/boards";
+
 export interface BoardTag {
   id: string;
   name: string;
@@ -55,8 +59,8 @@ export async function getBoard(id: string) {
   return res.data;
 }
 
-export async function getBoardScene(id: string) {
-  const res = await api.get(`/api/boards/${id}/scene`);
+export async function getBoardScene(id: string, base = BOARDS_API) {
+  const res = await api.get(`${base}/${id}/scene`);
   return res.data as unknown as ExcalidrawInitialDataState;
 }
 
@@ -67,13 +71,14 @@ export async function saveScene(
   id: string,
   scene: Blob,
   sceneHash: number,
-  kind: SceneSaveKind = "Incremental"
+  kind: SceneSaveKind = "Incremental",
+  base = BOARDS_API
 ) {
   const form = new FormData();
   form.append("Scene", scene, "scene.json");
   form.append("SceneHash", String(sceneHash));
   form.append("Kind", kind);
-  await api.put(`/api/boards/${id}/scene`, form);
+  await api.put(`${base}/${id}/scene`, form);
 }
 
 export async function deleteBoard(id: string) {
@@ -133,16 +138,22 @@ export async function deleteBoardThumbnail(boardId: string, position: number) {
   await api.delete(`/api/thumbnail/${boardId}/${position}`);
 }
 
-export async function getUploadUrl(boardId: string, fileId: string) {
-  const res = await api.get<string>(
-    `/api/boards/${boardId}/uploadUrl/${fileId}`
-  );
+export async function getUploadUrl(
+  boardId: string,
+  fileId: string,
+  base = BOARDS_API
+) {
+  const res = await api.get<string>(`${base}/${boardId}/uploadUrl/${fileId}`);
   return res.data;
 }
 
-export async function getDownloadUrls(boardId: string, fileIds: string[]) {
+export async function getDownloadUrls(
+  boardId: string,
+  fileIds: string[],
+  base = BOARDS_API
+) {
   const res = await api.post<Record<string, string>>(
-    `/api/boards/${boardId}/downloadUrls`,
+    `${base}/${boardId}/downloadUrls`,
     { fileIds }
   );
   return res.data;
@@ -185,6 +196,17 @@ export async function updateCollaborator(
 
 export async function removeCollaborator(boardId: string, userId: string) {
   await api.delete(`/api/boards/${boardId}/collaborators/${userId}`);
+}
+
+/** Newest boards the caller can see: published, own, or shared with them. */
+export async function listLatestBoards(
+  page: number,
+  pageSize: number
+): Promise<PagedEnvelope<Board>> {
+  const res = await api.get<PagedEnvelope<Board>>("/api/boards/latest", {
+    params: { page, pageSize },
+  });
+  return res.data;
 }
 
 export async function listUserBoards(

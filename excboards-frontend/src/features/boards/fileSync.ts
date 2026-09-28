@@ -24,8 +24,12 @@ export function getReferencedFileIds(elements: readonly ExcalidrawElement[]): st
   return [...ids];
 }
 
-export async function uploadBoardFile(boardId: string, file: BinaryFileData) {
-  const uploadUrl = await boardsApi.getUploadUrl(boardId, file.id);
+export async function uploadBoardFile(
+  boardId: string,
+  file: BinaryFileData,
+  base = boardsApi.BOARDS_API,
+) {
+  const uploadUrl = await boardsApi.getUploadUrl(boardId, file.id, base);
   const blob = await dataURLToBlob(file.dataURL);
   const res = await fetch(uploadUrl, {
     method: "PUT",
@@ -46,11 +50,12 @@ export async function hydrateBoardFiles(
   boardId: string,
   fileIds: string[],
   excalidrawApi: ExcalidrawImperativeAPI,
+  base = boardsApi.BOARDS_API,
 ): Promise<string[]> {
   let pending = fileIds;
 
   for (let attempt = 0; pending.length > 0; attempt++) {
-    const urls = await boardsApi.getDownloadUrls(boardId, pending);
+    const urls = await boardsApi.getDownloadUrls(boardId, pending, base);
     const results = await Promise.all(
       pending.map(async (id): Promise<BinaryFileData | null> => {
         const url = urls[id];

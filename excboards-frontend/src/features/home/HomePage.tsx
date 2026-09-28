@@ -1,8 +1,9 @@
 import { useStatus } from "@/features/auth/queries";
 import { HomeSearch } from "@/features/search/components/HomeSearch";
 import { staggerDelay } from "@/lib/utils";
+import { WorldBoardSection } from "@/features/worldBoard/components/WorldBoardSection";
 import { LandingHero } from "./components/LandingHero";
-import { RecommendedByTagSection } from "./components/RecommendedByTagSection";
+import { LatestBoardsSection } from "./components/LatestBoardsSection";
 import { RecentlyViewedSection } from "./components/RecentlyViewedSection";
 import { YourBoardsSection } from "./components/YourBoardsSection";
 
@@ -14,7 +15,19 @@ export function HomePage() {
 
   if (isLoading) return null;
 
-  if (!user) return <LandingHero />;
+  if (!user) {
+    return (
+      <>
+        <LandingHero />
+        <div
+          className={`mx-auto w-full max-w-6xl px-4 pb-12 ${ENTRANCE_CLASS}`}
+          style={staggerDelay(3, 100)}
+        >
+          <WorldBoardSection />
+        </div>
+      </>
+    );
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8">
@@ -22,13 +35,16 @@ export function HomePage() {
         <HomeSearch className="mx-auto max-w-xl" />
       </div>
       <div className={ENTRANCE_CLASS} style={staggerDelay(1, 80)}>
-        <YourBoardsSection user={user} />
+        <WorldBoardSection />
       </div>
       <div className={ENTRANCE_CLASS} style={staggerDelay(2, 80)}>
-        <RecentlyViewedSection />
+        <YourBoardsSection user={user} />
       </div>
       <div className={ENTRANCE_CLASS} style={staggerDelay(3, 80)}>
-        <RecommendedByTagSection />
+        <RecentlyViewedSection />
+      </div>
+      <div className={ENTRANCE_CLASS} style={staggerDelay(4, 80)}>
+        <LatestBoardsSection />
       </div>
     </div>
   );
