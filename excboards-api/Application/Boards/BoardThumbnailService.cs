@@ -14,6 +14,8 @@ public class BoardThumbnailService(IFileRepository fileRepository,
     IBoardRepository boardRepository)
 {
     private const int MaxThumbnails = 5;
+    public const int MaxBatchBoards = 50;
+    private static readonly TimeSpan DownloadUrlExpiry = TimeSpan.FromMinutes(10);
 
     // add thumbnail to board -> send to user presigned upload url
     public async Task<ErrorOr<BoardThumbnailDto>> AddBoardThumbnailAsync(Guid userId, Guid boardId)
@@ -61,7 +63,7 @@ public class BoardThumbnailService(IFileRepository fileRepository,
     
     
     // list all thumbnails for a board with their presigned download links
-    public async Task<ErrorOr<List<BoardThumbnailDto>>> GetBoardThumbnailsAsync(Guid userId, Guid boardId)
+    public async Task<ErrorOr<List<BoardThumbnailDto>>> GetBoardThumbnailsAsync(Guid? userId, Guid boardId)
     {
         if (!await permissionService.CanViewAsync(userId, boardId))
             return Error.NotFound("Board.Thumbnails", "Board not found");
@@ -86,8 +88,46 @@ public class BoardThumbnailService(IFileRepository fileRepository,
         return dtos;
     }
 
+    // thumbnails for many boards at once (board lists), keyed by board id;
+    // boards the user can't see or that don't exist are left out
+    public async Task<ErrorOr<Dictionary<Guid, List<BoardThumbnailDto>>>> GetThumbnailsForBoardsAsync(
+        Guid? userId, List<Guid> boardIds)
+    {
+        var ids = boardIds.Distinct().ToList();
+        if (ids.Count == 0)
+            return new Dictionary<Guid, List<BoardThumbnailDto>>();
+        if (ids.Count > MaxBatchBoards)
+            return Error.Validation("Board.Thumbnails", $"At most {MaxBatchBoards} boards per request.");
+
+        var access = await permissionService.CanViewAsync(userId, ids);
+        var visibleIds = access?
+            .Where(a => a.Value)
+            .Select(a => a.Key)
+            .ToList() ?? [];
+
+        var result = visibleIds.ToDictionary(id => id, _ => new List<BoardThumbnailDto>());
+        if (visibleIds.Count == 0)
+            return result;
+
+        var thumbnails = await thumbnailRepository.GetThumbnailsForBoardsAsync(visibleIds);
+        foreach (var thumbnail in thumbnails)
+        {
+            var downloadUrl = await fileRepository
+                .GetDownloadUrlAsync(BoardFileKeys.Thumbnail(thumbnail.BoardId, thumbnail.Id), DownloadUrlExpiry);
+
+            result[thumbnail.BoardId].Add(new BoardThumbnailDto
+            {
+                BoardId = thumbnail.BoardId,
+                Position = thumbnail.Position,
+                DownloadUrl = downloadUrl,
+            });
+        }
+
+        return result;
+    }
+
     // get thumbnail presigned download link
-    public async Task<ErrorOr<BoardThumbnailDto>> GetBoardThumbnailAsync(Guid userId, Guid boardId, int position)
+    public async Task<ErrorOr<BoardThumbnailDto>> GetBoardThumbnailAsync(Guid? userId, Guid boardId, int position)
     {
         if (!await permissionService.CanViewAsync(userId, boardId))
             return Error.NotFound("Board.Thumbnails", "Board not found");

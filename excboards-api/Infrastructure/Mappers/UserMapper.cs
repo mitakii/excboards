@@ -9,14 +9,10 @@ public static class UserMapper
     {
         return new UserDto
         {
-            Id = user.Id,
-            Email = user.Email,
+            UserId = user.Id,
             Username = user.UserName,
             CreatedAtUtc = user.CreatedAtUtc,
             ProfilePictureUrl = user.ProfilePictureUrl
         };
     }
-    
-    public static List<UserDto> MapToDto(this List<User> user) => 
-        user.Select(MapToDto).ToList();
 }

@@ -22,6 +22,31 @@ namespace Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Domain.Entities.BoardBookmark", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BoardId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BoardId");
+
+                    b.HasIndex("UserId", "BoardId")
+                        .IsUnique();
+
+                    b.ToTable("BoardBookmarks", (string)null);
+                });
+
             modelBuilder.Entity("Domain.Entities.BoardCollaborator", b =>
                 {
                     b.Property<Guid>("Id")
@@ -47,7 +72,32 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasIndex("BoardId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("BoardCollaborators");
+                    b.ToTable("BoardCollaborators", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.BoardLike", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BoardId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BoardId");
+
+                    b.HasIndex("UserId", "BoardId")
+                        .IsUnique();
+
+                    b.ToTable("BoardLikes", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.BoardThumbnail", b =>
@@ -70,7 +120,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasIndex("BoardId", "Position")
                         .IsUnique();
 
-                    b.ToTable("BoardThumbnails");
+                    b.ToTable("BoardThumbnails", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.Tag", b =>
@@ -89,7 +139,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("Tags");
+                    b.ToTable("Tags", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.UserBoard", b =>
@@ -139,7 +189,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasIndex("UserId", "NormalizedName")
                         .IsUnique();
 
-                    b.ToTable("UserBoards");
+                    b.ToTable("UserBoards", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.UserProject", b =>
@@ -174,7 +224,7 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserProjects");
+                    b.ToTable("UserProjects", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.WorldBoard", b =>
@@ -200,7 +250,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasIndex("CreatedAt")
                         .IsUnique();
 
-                    b.ToTable("WorldBoards");
+                    b.ToTable("WorldBoards", (string)null);
                 });
 
             modelBuilder.Entity("Infrastructure.Identity.RefreshToken", b =>
@@ -228,7 +278,7 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("RefreshTokens");
+                    b.ToTable("RefreshTokens", (string)null);
                 });
 
             modelBuilder.Entity("Infrastructure.Identity.User", b =>
@@ -448,7 +498,7 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.HasIndex("UserBoardId");
 
-                    b.ToTable("TagUserBoard");
+                    b.ToTable("TagUserBoard", (string)null);
                 });
 
             modelBuilder.Entity("UserBoardUserProject", b =>
@@ -463,7 +513,18 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.HasIndex("UserProjectId");
 
-                    b.ToTable("UserBoardUserProject");
+                    b.ToTable("UserBoardUserProject", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.BoardBookmark", b =>
+                {
+                    b.HasOne("Domain.Entities.UserBoard", "Board")
+                        .WithMany()
+                        .HasForeignKey("BoardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Board");
                 });
 
             modelBuilder.Entity("Domain.Entities.BoardCollaborator", b =>
@@ -481,6 +542,15 @@ namespace Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Board");
+                });
+
+            modelBuilder.Entity("Domain.Entities.BoardLike", b =>
+                {
+                    b.HasOne("Domain.Entities.UserBoard", null)
+                        .WithMany("BoardLikes")
+                        .HasForeignKey("BoardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Domain.Entities.BoardThumbnail", b =>
@@ -606,6 +676,8 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Domain.Entities.UserBoard", b =>
                 {
+                    b.Navigation("BoardLikes");
+
                     b.Navigation("BoardThumbnails");
 
                     b.Navigation("Collaborators");

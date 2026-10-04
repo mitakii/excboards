@@ -32,15 +32,7 @@ public class UserService(IUserRepository userRepository, UserManager<User> userM
 
     public async Task<ErrorOr<PagedResult<UserDto>>> SearchAsync(string query, int page, int pageSize)
     {
-        var users = await userRepository.SearchUsersAsync(query, page, pageSize);
-
-        return new PagedResult<UserDto>()
-        {
-            Total = users.Count,
-            Page = page,
-            PageSize = pageSize,
-            Data = users.MapToDto()
-        };
+        return await userRepository.SearchUsersAsync(query, page, pageSize);
     }
 
     //settings

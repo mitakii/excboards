@@ -1,3 +1,4 @@
+using Domain.Dto;
 using Domain.Entities;
 using Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -19,9 +20,22 @@ public class BoardCollaboratorRepository(AppDbContext context) : IBoardCollabora
             .ToListAsync();
     }
 
-    public Task<List<BoardCollaborator>> GetAllByBoardIdAsync(Guid boardId)
+    public Task<List<BoardCollaboratorDto>> GetDtosByBoardIdAsync(Guid boardId)
     {
-        return context.BoardCollaborators.Where(c => c.BoardId == boardId).ToListAsync();
+        return context.BoardCollaborators
+            .AsNoTracking()
+            .Where(c => c.BoardId == boardId)
+            .Join(context.Users, c => c.UserId, u => u.Id, (c, u) => 
+                new BoardCollaboratorDto
+            {
+                BoardId = c.BoardId,
+                UserId = c.UserId,
+                Username = u.UserName!,
+                ProfilePictureUrl = u.ProfilePictureUrl,
+                Created = c.CreatedAt,
+                Permission = c.Permission
+            })
+            .ToListAsync();
     }
 
     public Task AddAsync(BoardCollaborator collaborator)

@@ -1,7 +1,6 @@
 using System.Net;
 using Application.Dto;
 using Application.Interfaces;
-using Application.Mappers;
 using Application.Storage;
 using Domain.Dto;
 using Domain.Entities;
@@ -58,23 +57,15 @@ public class BoardService(IBoardRepository boardRepository,
         return board.Id;
     }
 
-    public async Task<ErrorOr<PagedResult<UserBoardDto>>> SearchAsync(Guid userId, string query, int page = 1, int pageSize = 10)
+    public async Task<ErrorOr<PagedResult<BoardSummaryDto>>> SearchAsync(Guid? userId, string query, int page = 1, int pageSize = 10)
     {
         if(string.IsNullOrWhiteSpace(query))
             return Error.Validation("Board.SearchQuery", "Search query is required.");
         
-        var boards = await boardRepository.SearchAsync(userId, query, page, pageSize);
-        
-        return new PagedResult<UserBoardDto>()
-        {
-            Data = boards.Data.MapToDto(),
-            Page = page,
-            PageSize = pageSize,
-            Total = boards.Total
-        };
+        return await boardRepository.SearchAsync(userId, query, page, pageSize);
     }
 
-    public async Task<ErrorOr<PagedResult<UserBoardDto>>> SearchByTagsAsync(Guid userId, List<string> tags, int page = 1, int pageSize = 10)
+    public async Task<ErrorOr<PagedResult<BoardSummaryDto>>> SearchByTagsAsync(Guid? userId, List<string> tags, int page = 1, int pageSize = 10)
     {
         var names = tags
             .Select(t => t.Trim().TrimStart('#').Trim())
@@ -88,7 +79,7 @@ public class BoardService(IBoardRepository boardRepository,
         var tagIds = await tagRepository.GetTagsIdsByNameAsync(names);
         
         if (tagIds.Count < names.Count)
-            return new PagedResult<UserBoardDto>
+            return new PagedResult<BoardSummaryDto>
             {
                 Data = [],
                 Page = page,
@@ -96,40 +87,24 @@ public class BoardService(IBoardRepository boardRepository,
                 Total = 0
             };
 
-        var boards = await boardRepository.SearchByTagsAsync(userId, tagIds, page, pageSize);
-        
-        return new PagedResult<UserBoardDto>()
-        {
-            Data = boards.Data.MapToDto(),
-            Page = page,
-            PageSize = pageSize,
-            Total = boards.Total
-        };
+        return await boardRepository.SearchByTagsAsync(userId, tagIds, page, pageSize);
     }
     
-    public async Task<ErrorOr<UserBoardDto>> GetByIdAsync(Guid userId, Guid boardId)
+    public async Task<ErrorOr<BoardSummaryDto>> GetByIdAsync(Guid userId, Guid boardId)
     {
-        var board = await boardRepository.GetByIdAsync(boardId);
-        if (board == null)
-            return Error.NotFound("Board.NotFound", "Board not found");
-
         if (!await permissionService.CanViewAsync(userId, boardId))
             return Error.NotFound("Board.NotFound", "Board not found");
 
-        return board.MapToDto();
+        var board = await boardRepository.GetSummaryByIdAsync(boardId, userId);
+        if (board == null)
+            return Error.NotFound("Board.NotFound", "Board not found");
+
+        return board;
     }
 
-    public async Task<ErrorOr<PagedResult<UserBoardDto>>> GetLatestBoardsAsync(Guid userId, int page, int pageSize)
+    public async Task<ErrorOr<PagedResult<BoardSummaryDto>>> GetLatestBoardsAsync(Guid? userId, int page, int pageSize)
     {
-        var result = await boardRepository.GetLatestPagedAsync(userId, page, pageSize);
-
-        return new PagedResult<UserBoardDto>()
-        {
-            Data = result.Data.MapToDto(),
-            Page = page,
-            PageSize = pageSize,
-            Total = result.Total
-        };
+        return await boardRepository.GetLatestPagedAsync(userId, page, pageSize);
     }
 
     public async Task<ErrorOr<Stream>> GetSceneAsync(Guid userId, Guid boardId)
@@ -273,21 +248,10 @@ public class BoardService(IBoardRepository boardRepository,
         return Result.Updated;
     }
 
-    public async Task<ErrorOr<PagedResult<UserBoardDto>>> GetUserBoards(Guid requestUserId, Guid currentUserId, int pageNumber, int pageSize)
+    public async Task<ErrorOr<PagedResult<BoardSummaryDto>>> GetUserBoards(Guid requestUserId, Guid? currentUserId, int pageNumber, int pageSize)
     {
-        var userBoards = await boardRepository
+        return await boardRepository
             .GetAllByUserIdPagedAsync(requestUserId, currentUserId, pageNumber, pageSize);
-
-        if(userBoards.Total == 0)
-            return Error.NotFound("Board.NotFound", "Board not found");
-
-        return new PagedResult<UserBoardDto>()
-        {
-            Data = userBoards.Data.MapToDto(),
-            Page = pageNumber,
-            PageSize = pageSize,
-            Total = userBoards.Total
-        };
     }
 
     public async Task<ErrorOr<Dictionary<string, string>>> GetDownloadPresignedUrls(Guid userId, Guid boardId, List<string> sceneFileIds)

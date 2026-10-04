@@ -21,6 +21,16 @@ public class ThumbnailRepository(AppDbContext context) : IThumbnailRepository
             .ToListAsync();
     }
 
+    public Task<List<BoardThumbnail>> GetThumbnailsForBoardsAsync(List<Guid> boardIds)
+    {
+        return context.BoardThumbnails
+            .AsNoTracking()
+            .Where(t => boardIds.Contains(t.BoardId))
+            .OrderBy(t => t.BoardId)
+            .ThenBy(t => t.Position)
+            .ToListAsync();
+    }
+
     public async Task<BoardThumbnail> AddNextBoardThumbnailAsync(Guid boardId, int maxThumbnails)
     {
         await using var transaction = await context.Database.BeginTransactionAsync();
@@ -41,7 +51,7 @@ public class ThumbnailRepository(AppDbContext context) : IThumbnailRepository
             Created = DateTime.UtcNow,
         };
 
-        context.BoardThumbnails.Add(thumbnail);
+        await context.BoardThumbnails.AddAsync(thumbnail);
         await context.SaveChangesAsync();
         await transaction.CommitAsync();
 

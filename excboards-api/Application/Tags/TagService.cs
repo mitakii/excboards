@@ -1,8 +1,4 @@
-using System.Reflection;
-using Application.Dto;
-using Application.Mappers;
 using Domain.Dto;
-using Domain.Entities;
 using Domain.Interfaces;
 using ErrorOr;
 
@@ -12,15 +8,6 @@ public class TagService(ITagRepository tagRepository)
 {
     public async Task<ErrorOr<PagedResult<TagDto>>> SearchAsync(string query, int page, int pageSize)
     {
-        var result = await tagRepository.SearchTags(query, page, pageSize);
-        if(result.Count == 0)
-            return Error.NotFound("Tags.Search", "No tags found");
-        return new PagedResult<TagDto>()
-        {
-            Data = result.MapToDto(),
-            Page = page,
-            PageSize = pageSize,
-            Total = result.Count
-        };
+        return await tagRepository.SearchTags(query, page, pageSize);
     }
 }

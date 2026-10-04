@@ -1,3 +1,4 @@
+using Domain.Dto;
 using Domain.Entities;
 
 namespace Domain.Interfaces;
@@ -14,5 +15,5 @@ public interface ITagRepository
     public Task<List<Tag>> GetAllBoardTagsAsync(Guid boardId);
     
     
-    public Task<List<Tag>> SearchTags(string query, int pageNumber, int pageSize);
+    public Task<PagedResult<TagDto>> SearchTags(string query, int pageNumber, int pageSize);
 }

@@ -1,9 +1,9 @@
 using System.Collections.Immutable;
-using Application.Mappers;
 using Domain.Dto;
 using Domain.Entities;
 using Domain.Exceptions;
 using Domain.Interfaces;
+using Infrastructure.Persistence.Projections;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -61,12 +61,19 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
             .FirstOrDefaultAsync(ub => ub.Id == id);
     }
 
-    public async Task<PagedResult<UserBoard>> GetLatestPagedAsync(Guid userId, int pageNumber, int pageSize)
+    public Task<BoardSummaryDto?> GetSummaryByIdAsync(Guid id, Guid? viewerId)
+    {
+        return context.UserBoards
+            .AsNoTracking()
+            .Where(ub => ub.Id == id)
+            .Select(BoardProjections.Summary(viewerId))
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task<PagedResult<BoardSummaryDto>> GetLatestPagedAsync(Guid? userId, int pageNumber, int pageSize)
     {
         var q = context.UserBoards
             .AsNoTracking()
-            .Include(ub => ub.Tags)
-            .AsSplitQuery()
             .Where(ub => ub.IsPublished ||
                          userId == ub.UserId ||
                          ub.Collaborators.Any(c => c.UserId == userId))
@@ -77,9 +84,10 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
             
         var data = await q.Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
+            .Select(BoardProjections.Summary(userId))
             .ToListAsync();
 
-        return new PagedResult<UserBoard>()
+        return new PagedResult<BoardSummaryDto>()
         {
             Data = data,
             Page = pageNumber,
@@ -96,12 +104,10 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
             .ToListAsync();
     }
 
-    public async Task<PagedResult<UserBoard>> GetAllByUserIdPagedAsync(Guid requestedUserId, Guid currentUserId, int pageNumber, int pageSize)
+    public async Task<PagedResult<BoardSummaryDto>> GetAllByUserIdPagedAsync(Guid requestedUserId, Guid? currentUserId, int pageNumber, int pageSize)
     {
         var q = context.UserBoards
             .AsNoTracking()
-            .Include(ub => ub.Tags)
-            .AsSplitQuery()
             .Where(ub => ub.UserId == requestedUserId &&
                          (ub.IsPublished ||
                           currentUserId == ub.UserId ||
@@ -114,23 +120,22 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
         var data = await q
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
+            .Select(BoardProjections.Summary(currentUserId))
             .ToListAsync();
 
-        return new PagedResult<UserBoard>()
+        return new PagedResult<BoardSummaryDto>()
         {
             Data = data,
             Page = pageNumber,
-            PageSize = data.Count,
+            PageSize = pageSize,
             Total = count,
         };
     }
 
-    public async Task<PagedResult<UserBoard>> SearchAsync(Guid currentUserId, string query, int page = 1, int pageSize = 10)
+    public async Task<PagedResult<BoardSummaryDto>> SearchAsync(Guid? currentUserId, string query, int page = 1, int pageSize = 10)
     {
         var q = context.UserBoards
             .AsNoTracking()
-            .Include(ub => ub.Tags)
-            .AsSplitQuery()
             .Where(ub => (
                 EF.Functions.ILike(ub.Name, $"%{query}%") ||
                 EF.Functions.ILike(ub.Description, $"%{query}%")) &&
@@ -144,24 +149,23 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
         
         var data = await q.Skip((page - 1) * pageSize)
             .Take(pageSize)
+            .Select(BoardProjections.Summary(currentUserId))
             .ToListAsync();
 
-        return new PagedResult<UserBoard>()
+        return new PagedResult<BoardSummaryDto>()
         {
             Data = data,
             Page = page,
-            PageSize = data.Count,
+            PageSize = pageSize,
             Total = count,
         };
     }
 
-    public async Task<PagedResult<UserBoard>> SearchByTagsAsync(Guid currentUserId, List<Guid> tagIds, int page = 1, int pageSize = 10)
+    public async Task<PagedResult<BoardSummaryDto>> SearchByTagsAsync(Guid? currentUserId, List<Guid> tagIds, int page = 1, int pageSize = 10)
     {
         
         var q = context.UserBoards
             .AsNoTracking()
-            .Include(ub => ub.Tags)
-            .AsSplitQuery()
             .Where(ub => ub.Tags.Count(t => tagIds.Contains(t.Id)) == tagIds.Count &&
                          (ub.IsPublished || 
                           currentUserId == ub.UserId || 
@@ -173,13 +177,14 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
         
         var data = await q.Skip((page - 1) * pageSize)
             .Take(pageSize)
+            .Select(BoardProjections.Summary(currentUserId))
             .ToListAsync();
 
-        return new PagedResult<UserBoard>()
+        return new PagedResult<BoardSummaryDto>()
         {
             Data = data,
             Page = page,
-            PageSize = data.Count,
+            PageSize = pageSize,
             Total = count,
         };
     }

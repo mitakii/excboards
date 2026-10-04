@@ -1,6 +1,7 @@
+using System.Text.Json.Serialization;
 using Domain.Enums;
 
-namespace Application.Dto;
+namespace Domain.Dto;
 
 public class BoardCollaboratorDto
 {
@@ -8,6 +9,8 @@ public class BoardCollaboratorDto
     public Guid UserId { get; set; }
     public string Username { get; set; } = string.Empty;
     public string ProfilePictureUrl { get; set; } = string.Empty;
-    public DateTime CreatedAt { get; set; }
+    public DateTime Created { get; set; }
+    
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public PermissionLevel Permission { get; set; }
 }

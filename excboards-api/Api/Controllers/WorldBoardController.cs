@@ -70,7 +70,7 @@ public class WorldBoardController(
         if (result.IsError)
             return result.ToProblem(this);
 
-        return Ok(new SearchResponse<WorldBoardDto>(
+        return Ok(new PagedResponse<WorldBoardDto>(
             result.Value.Data,
             result.Value.Total,
             result.Value.Page,

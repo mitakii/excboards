@@ -16,9 +16,27 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<BoardCollaborator> BoardCollaborators => Set<BoardCollaborator>();
     public DbSet<BoardThumbnail> BoardThumbnails => Set<BoardThumbnail>();
     public DbSet<WorldBoard> WorldBoards => Set<WorldBoard>();
+    public DbSet<BoardLike> BoardLikes => Set<BoardLike>();
+    public DbSet<BoardBookmark>  BoardBookmarks => Set<BoardBookmark>();
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        builder.Entity<BoardBookmark>(bm =>
+        {
+            bm.HasIndex(x => new {  x.UserId, x.BoardId}).IsUnique();
+            bm.HasOne(x => x.Board)
+                .WithMany(b => b.BoardBookmarks)
+                .HasForeignKey(x => x.BoardId);
+        });
+        
+        builder.Entity<BoardLike>(l =>
+        {
+            l.HasIndex(x => new { x.UserId, x.BoardId }).IsUnique();
+            l.HasOne<UserBoard>()
+                .WithMany(b => b.BoardLikes)
+                .HasForeignKey(x => x.BoardId);
+        });
 
         builder.Entity<WorldBoard>(wb =>
         {

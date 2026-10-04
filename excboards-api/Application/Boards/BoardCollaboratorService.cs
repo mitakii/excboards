@@ -1,6 +1,5 @@
-using Application.Dto;
 using Application.Interfaces;
-using Application.Mappers;
+using Domain.Dto;
 using Domain.Entities;
 using Domain.Enums;
 using Domain.Interfaces;
@@ -93,23 +92,6 @@ public class BoardCollaboratorService(
         if(!permission)
             return Error.NotFound("Board.NotFound", "Board not found");
         
-        var collaborators = await collaboratorRepository.GetAllByBoardIdAsync(boardId);
-
-        var dtos = new List<BoardCollaboratorDto>(collaborators.Count);
-        foreach (var collaborator in collaborators)
-        {
-            var dto = collaborator.MapToDto();
-
-            var user = await userService.GetUserByIdAsync(collaborator.UserId);
-            if (!user.IsError)
-            {
-                dto.Username = user.Value.Username;
-                dto.ProfilePictureUrl = user.Value.ProfilePictureUrl;
-            }
-
-            dtos.Add(dto);
-        }
-
-        return dtos;
+        return await collaboratorRepository.GetDtosByBoardIdAsync(boardId);
     }
 }

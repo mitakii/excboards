@@ -2,10 +2,8 @@ using System.Security.Claims;
 using Application.Dto;
 using Application.Interfaces;
 using excboards_api.Attributes;
-using excboards_api.Contracts.Boards;
 using excboards_api.Contracts.User;
 using excboards_api.Extensions;
-using excboards_api.Mappers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,7 +20,7 @@ public class UserController(IUserService userService) : ControllerBase
         if (result.IsError)
             return result.ToProblem(this);
 
-        return Ok(result.Value.MapToResponse());
+        return Ok(result.Value);
     }
 
     [HttpGet("username/{username}")]
@@ -32,7 +30,7 @@ public class UserController(IUserService userService) : ControllerBase
         if (result.IsError)
             return result.ToProblem(this);
 
-        return Ok(result.Value.MapToResponse());
+        return Ok(result.Value);
     }
 
     [Authorize]

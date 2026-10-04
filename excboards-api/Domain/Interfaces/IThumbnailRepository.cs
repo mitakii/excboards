@@ -6,6 +6,7 @@ public interface IThumbnailRepository
 {
     public Task<BoardThumbnail?> GetBoardThumbnailAsync(Guid boardId, int position);
     public Task<List<BoardThumbnail>> GetBoardThumbnailsAsync(Guid boardId);
+    public Task<List<BoardThumbnail>> GetThumbnailsForBoardsAsync(List<Guid> boardIds);
     public Task<BoardThumbnail> AddNextBoardThumbnailAsync(Guid boardId, int maxThumbnails);
     public Task DeleteBoardThumbnailAsync(BoardThumbnail thumbnail);
     

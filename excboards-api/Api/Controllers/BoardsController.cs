@@ -1,11 +1,11 @@
 using Application.Boards;
 using Application.Dto;
+using Domain.Dto;
 using excboards_api.Contracts;
 using excboards_api.Contracts.Boards;
 using excboards_api.Contracts.Search;
 using excboards_api.Extensions;
 using excboards_api.Hubs;
-using excboards_api.Mappers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -19,6 +19,8 @@ public class BoardsController
     (BoardService boardService, BoardCollaboratorService boardCollaboratorService, IHubContext<CanvasHub> hubContext, 
         ILogger<BoardsController> logger) : ControllerBase
 {
+    private const int MaxPageSize = 50;
+
     [HttpPost]
     public async Task<IActionResult> Create([FromForm] CreateBoardRequest request)
     {
@@ -69,35 +71,40 @@ public class BoardsController
         return Ok();
     }
 
+    [AllowAnonymous]
     [HttpGet("u/{userId:guid}")]
     public async Task<IActionResult> GetUserBoards(Guid userId, [FromQuery] PagedRequest request)
     {
+        var page = Math.Max(request.Page, 1);
+        var pageSize = Math.Clamp(request.PageSize, 1, MaxPageSize);
+
         var result = await boardService
-            .GetUserBoards(userId, User.GetUserId(), request.Page, request.PageSize);
+            .GetUserBoards(userId, User.TryGetUserId(), page, pageSize);
         if (result.IsError)
             return result.ToProblem(this);
 
-        return Ok(new SearchResponse<BoardResponse>(
-            result.Value.Data.MapToResponse(),
+        return Ok(new PagedResponse<BoardSummaryDto>(
+            result.Value.Data,
             result.Value.Total,
             result.Value.Page,
             result.Value.PageSize)
         );
     }
 
+    [AllowAnonymous]
     [HttpGet("latest")]
     public async Task<IActionResult> GetLatestBoards([FromQuery] PagedRequest request)
     {
-        if(request.Page == 0 ||  request.PageSize == 0)
-            return BadRequest();
-        
+        var page = Math.Max(request.Page, 1);
+        var pageSize = Math.Clamp(request.PageSize, 1, MaxPageSize);
+
         var result = await boardService
-            .GetLatestBoardsAsync(User.GetUserId(), request.Page, request.PageSize);
+            .GetLatestBoardsAsync(User.TryGetUserId(), page, pageSize);
         if(result.IsError)
             return result.ToProblem(this);
 
-        return Ok(new SearchResponse<BoardResponse>(
-            result.Value.Data.MapToResponse(),
+        return Ok(new PagedResponse<BoardSummaryDto>(
+            result.Value.Data,
             result.Value.Total,
             result.Value.Page,
             result.Value.PageSize)
@@ -111,7 +118,7 @@ public class BoardsController
         if (result.IsError)
             return result.ToProblem(this);
         
-        return Ok(result.Value.MapToResponse());
+        return Ok(result.Value);
     }
 
     [HttpGet("{boardId:guid}/scene")]
@@ -226,6 +233,6 @@ public class BoardsController
         if(result.IsError)
             return result.ToProblem(this);
         
-        return Ok(result.Value.MapToResponse());
+        return Ok(result.Value);
     }
 }

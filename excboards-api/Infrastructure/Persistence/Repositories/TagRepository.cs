@@ -1,3 +1,4 @@
+using Domain.Dto;
 using Domain.Entities;
 using Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -50,15 +51,28 @@ public class TagRepository(AppDbContext context) : ITagRepository
             .ToListAsync();
     }
 
-    public Task<List<Tag>> SearchTags(string query, int pageNumber, int pageSize)
+    public async Task<PagedResult<TagDto>> SearchTags(string query, int pageNumber, int pageSize)
     {
-        return context.Tags
+        var q = context.Tags
             .AsNoTracking()
-            .Where(t => EF.Functions.ILike(t.Name, $"%{query}%"))           
+            .Where(t => EF.Functions.ILike(t.Name, $"%{query}%"));
+
+        var total = await q.CountAsync();
+
+        var data = await q
             .OrderBy(t => t.Name)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
+            .Select(t => new TagDto { Id = t.Id, Name = t.Name })
             .ToListAsync();
+
+        return new PagedResult<TagDto>()
+        {
+            Data = data,
+            Page = pageNumber,
+            PageSize = pageSize,
+            Total = total,
+        };
     }
 
     public async Task<List<Tag>> CreateTagsAsync(List<string> tags)

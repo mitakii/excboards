@@ -1,5 +1,7 @@
 using Application.Auth;
 using Application.Boards;
+using Application.Bookmarks;
+using Application.Likes;
 using Application.Interfaces;
 using Application.Storage;
 using Application.Tags;
@@ -93,6 +95,8 @@ public static class InfrastructureServiceCollectionExtensions
         builder.Services.AddScoped<IBoardRepository, BoardRepository>();
         builder.Services.AddScoped<IThumbnailRepository, ThumbnailRepository>();
         builder.Services.AddScoped<IWorldBoardRepository, WorldBoardRepository>();
+        builder.Services.AddScoped<ILikeRepository, BoardLikeRepository>();
+        builder.Services.AddScoped<IBoardBookmarkRepository, BoardBookmarkRepository>();
 
         return builder;
     }
@@ -107,7 +111,8 @@ public static class InfrastructureServiceCollectionExtensions
         builder.Services.AddScoped<BoardCollaboratorService>();
         builder.Services.AddScoped<BoardThumbnailService>();
         builder.Services.AddScoped<WorldBoardService>();
-        builder.Services.AddScoped<WorldBoardService>();
+        builder.Services.AddScoped<BookmarkService>();
+        builder.Services.AddScoped<LikeService>();
 
         return builder;
     }

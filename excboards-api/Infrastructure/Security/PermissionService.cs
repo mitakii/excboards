@@ -28,15 +28,17 @@ public class PermissionService(AppDbContext context) : IPermissionService
         return !await UserWorldBoardIsBannedAsync(userId);
     }
 
-    public async Task<bool> CanViewAsync(Guid userId, Guid boardId)
+    public async Task<bool> CanViewAsync(Guid? userId, Guid boardId)
     {
         if(await BoardIsPublicAsync(boardId))
             return true;
-        return await GetAccessAsync(userId, boardId) is not null;
+        if (userId is not { } id)
+            return false;
+        return await GetAccessAsync(id, boardId) is not null;
     }
     
 
-    public async Task<Dictionary<Guid, bool>?> CanViewAsync(Guid userId, List<Guid> boardIds) =>
+    public async Task<Dictionary<Guid, bool>?> CanViewAsync(Guid? userId, List<Guid> boardIds) =>
         await GetViewAccessAsync(userId, boardIds);
 
     public async Task<bool> CanEditAsync(Guid userId, Guid boardId)
@@ -91,15 +93,16 @@ public class PermissionService(AppDbContext context) : IPermissionService
         return result;
     }
     
-    private async Task<Dictionary<Guid, bool>?> GetViewAccessAsync(Guid userId, List<Guid> boardIds)
+    private async Task<Dictionary<Guid, bool>?> GetViewAccessAsync(Guid? userId, List<Guid> boardIds)
     {
         var result = await context.UserBoards
             .AsNoTracking()
             .Where(b => boardIds.Contains(b.Id))
             .Select(b => new {
                 b.Id,
-                Permission = b.IsPublished || b.Collaborators
-                    .Any(c => c.UserId == userId)})
+                Permission = b.IsPublished
+                             || b.UserId == userId
+                             || b.Collaborators.Any(c => c.UserId == userId)})
             .ToDictionaryAsync(b => b.Id, b => b.Permission);
 
         return result;
