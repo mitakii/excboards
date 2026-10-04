@@ -4,30 +4,31 @@ import { Spinner } from "@/components/ui/spinner";
 import { getErrorMessage } from "@/lib/api";
 import { BoardList } from "@/features/boards/components/BoardList";
 import type { BoardCardData } from "@/features/boards/components/BoardCard";
-import { useLatestBoards } from "@/features/boards/queries";
+import { useBookmarkedBoards } from "@/features/bookmarks/queries";
 import { useUsersByIds } from "@/features/profile/queries";
 
 const PAGE_SIZE = 9;
 
-export function LatestBoardsSection() {
+export function BookmarkedBoardsSection() {
   const [page, setPage] = useState(1);
-  const boards = useLatestBoards(page, PAGE_SIZE);
-  const latest = boards.data?.result ?? [];
-  const owners = useUsersByIds(latest.map((board) => board.ownerId));
+  const boards = useBookmarkedBoards(page, PAGE_SIZE);
+  const bookmarked = boards.data?.result ?? [];
+  const owners = useUsersByIds(bookmarked.map((board) => board.ownerId));
 
-  const items: BoardCardData[] = latest.map((board) => {
+  const items: BoardCardData[] = bookmarked.map((board) => {
     const owner = owners[board.ownerId];
     return {
-      id: board.id,
+      id: board.boardId,
       name: board.name,
       description: board.description ?? "",
       tags: board.tags.map((tag) => tag.name),
       owner: owner
         ? { username: owner.username, pfpUrl: owner.profilePictureUrl }
         : undefined,
-      updatedAt: new Date(board.updated).toLocaleDateString(),
+      updatedAt: new Date(board.updatedAt).toLocaleDateString(),
       isPublished: board.isPublished,
-      isBookmarked: board.isBookmarked,
+      // set by the bookmark button's cache update; rows start out bookmarked
+      isBookmarked: board.isBookmarked ?? true,
       likesCount: board.likesCount,
       isLiked: board.isLiked,
     };
@@ -41,10 +42,13 @@ export function LatestBoardsSection() {
         </div>
       ) : boards.isError ? (
         <p className="text-sm text-destructive">
-          {getErrorMessage(boards.error, "Failed to load latest boards.")}
+          {getErrorMessage(boards.error, "Failed to load bookmarked boards.")}
         </p>
       ) : (
-        <BoardList boards={items} emptyMessage="No boards yet." />
+        <BoardList
+          boards={items}
+          emptyMessage="Boards you bookmark will show up here."
+        />
       )}
       {(boards.data?.totalCount ?? 0) > PAGE_SIZE && (
         <PagePagination

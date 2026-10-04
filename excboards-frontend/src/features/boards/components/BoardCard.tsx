@@ -13,6 +13,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ClampText } from "@/components/ClampText";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { BookmarkButton } from "@/features/bookmarks/components/BookmarkButton";
+import { LikeButton } from "@/features/likes/components/LikeButton";
 import { getErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useBoardThumbnails } from "../queries";
@@ -27,6 +29,11 @@ export interface BoardCardData {
   owner?: { username: string; pfpUrl?: string };
   updatedAt: string;
   isPublished: boolean;
+  /** null for anonymous viewers, which hides the bookmark button. */
+  isBookmarked?: boolean | null;
+  likesCount: number;
+  /** null for anonymous viewers: the count shows but can't be clicked. */
+  isLiked?: boolean | null;
 }
 
 function VisibilityIcon({ isPublished }: { isPublished: boolean }) {
@@ -111,6 +118,19 @@ export function BoardCard({
                 </>
               )}
               <span>Updated {board.updatedAt}</span>
+              <div className="pointer-events-auto relative z-10 ml-auto flex items-center">
+                <BookmarkButton
+                  boardId={board.id}
+                  isBookmarked={board.isBookmarked}
+                  size="icon-sm"
+                />
+                <LikeButton
+                  boardId={board.id}
+                  isLiked={board.isLiked}
+                  likesCount={board.likesCount}
+                  size="sm"
+                />
+              </div>
             </div>
           </div>
         </CardContent>

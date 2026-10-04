@@ -4,7 +4,6 @@ import { api } from "@/lib/api";
 export interface UserProfile {
   userId: string;
   username: string;
-  email: string;
   createdAtUtc: string;
   profilePictureUrl: string;
 }
@@ -22,7 +21,6 @@ export async function getUserById(id: string) {
 export interface UserSearchResult {
   userId: string;
   username: string;
-  email: string;
   createdAtUtc: string;
   profilePictureUrl: string;
 }

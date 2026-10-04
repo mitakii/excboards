@@ -1,3 +1,4 @@
+import { BookmarkIcon } from "lucide-react";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -5,7 +6,8 @@ import {
   SidebarMenu,
 } from "@/components/ui/sidebar";
 import { useStatus } from "@/features/auth/queries";
-import { useRecentBoards, useUserBoards } from "@/features/boards/queries";
+import { useUserBoards } from "@/features/boards/queries";
+import { useBookmarkedBoards } from "@/features/bookmarks/queries";
 import { SidebarBoardTile } from "@/features/boards/components/SidebarBoardTile";
 import { RecentUsersList } from "@/features/profile/components/RecentUsersList";
 
@@ -17,8 +19,9 @@ function EmptyHint({ children }: { children: React.ReactNode }) {
 
 export function GeneralSidebarContent() {
   const { data: user } = useStatus();
-  const recentBoards = useRecentBoards();
   const myBoards = useUserBoards(user?.userId, 1, 20);
+  const bookmarks = useBookmarkedBoards(1, 20, !!user);
+  const bookmarkedBoards = bookmarks.data?.result ?? [];
 
   return (
     <>
@@ -29,24 +32,32 @@ export function GeneralSidebarContent() {
         </SidebarGroupContent>
       </SidebarGroup>
 
-      <SidebarGroup>
-        <SidebarGroupLabel>Excalidraw boards</SidebarGroupLabel>
-        <SidebarGroupContent>
-          {recentBoards.length === 0 ? (
-            <EmptyHint>No recently opened boards yet.</EmptyHint>
-          ) : (
-            <SidebarMenu className="gap-1">
-              {recentBoards.map((board) => (
-                <SidebarBoardTile
-                  key={board.id}
-                  id={board.id}
-                  name={board.name}
-                />
-              ))}
-            </SidebarMenu>
-          )}
-        </SidebarGroupContent>
-      </SidebarGroup>
+      {user && (
+        <SidebarGroup>
+          <SidebarGroupLabel>Bookmarked boards</SidebarGroupLabel>
+          <SidebarGroupContent>
+            {bookmarkedBoards.length === 0 ? (
+              <EmptyHint>You haven't bookmarked any boards yet.</EmptyHint>
+            ) : (
+              <SidebarMenu className="gap-1">
+                {bookmarkedBoards.map((board) => (
+                  <SidebarBoardTile
+                    key={board.boardId}
+                    id={board.boardId}
+                    name={board.name}
+                    trailing={
+                      <BookmarkIcon
+                        aria-label="Bookmarked"
+                        className="size-4 fill-current text-sidebar-foreground/70"
+                      />
+                    }
+                  />
+                ))}
+              </SidebarMenu>
+            )}
+          </SidebarGroupContent>
+        </SidebarGroup>
+      )}
 
       {user && (
         <SidebarGroup>

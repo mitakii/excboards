@@ -19,6 +19,10 @@ export interface Board {
   isPublished: boolean;
   created: string;
   updated: string;
+  likesCount: number;
+  /** null when the viewer is anonymous. */
+  isLiked: boolean | null;
+  isBookmarked: boolean | null;
   tags: BoardTag[];
 }
 
@@ -104,9 +108,51 @@ export async function addBoardThumbnail(boardId: string) {
   return res.data;
 }
 
-export async function listBoardThumbnails(boardId: string) {
-  const res = await api.get<BoardThumbnail[]>(`/api/thumbnail/${boardId}`);
-  return res.data;
+/** Mirrors backend Application.Boards.BoardThumbnailService.MaxBatchBoards. */
+const MAX_THUMBNAIL_BATCH = 50;
+
+interface PendingThumbnailRequest {
+  resolve: (thumbnails: BoardThumbnail[]) => void;
+  reject: (error: unknown) => void;
+}
+
+let pendingThumbnailRequests = new Map<string, PendingThumbnailRequest[]>();
+let thumbnailFlushScheduled = false;
+
+async function flushThumbnailRequests() {
+  const pending = pendingThumbnailRequests;
+  pendingThumbnailRequests = new Map();
+  thumbnailFlushScheduled = false;
+
+  const ids = [...pending.keys()];
+  for (let i = 0; i < ids.length; i += MAX_THUMBNAIL_BATCH) {
+    const chunk = ids.slice(i, i + MAX_THUMBNAIL_BATCH);
+    try {
+      const res = await api.post<Record<string, BoardThumbnail[]>>(
+        "/api/thumbnail/batch",
+        { boardIds: chunk }
+      );
+      // boards the user can't see are left out of the response
+      for (const id of chunk)
+        pending.get(id)!.forEach((r) => r.resolve(res.data[id] ?? []));
+    } catch (err) {
+      for (const id of chunk) pending.get(id)!.forEach((r) => r.reject(err));
+    }
+  }
+}
+
+/** Calls made in the same tick (e.g. every BoardCard on a list page) share one batched request. */
+export function listBoardThumbnails(boardId: string) {
+  return new Promise<BoardThumbnail[]>((resolve, reject) => {
+    const waiting = pendingThumbnailRequests.get(boardId) ?? [];
+    waiting.push({ resolve, reject });
+    pendingThumbnailRequests.set(boardId, waiting);
+
+    if (!thumbnailFlushScheduled) {
+      thumbnailFlushScheduled = true;
+      setTimeout(flushThumbnailRequests, 0);
+    }
+  });
 }
 
 export async function uploadBoardThumbnail(boardId: string, file: File) {
@@ -117,21 +163,6 @@ export async function uploadBoardThumbnail(boardId: string, file: File) {
     body: file,
     headers: { "Content-Type": file.type },
   });
-}
-
-export async function getBoardThumbnail(
-  boardId: string,
-  position = 1
-): Promise<BoardThumbnail | null> {
-  try {
-    const res = await api.get<BoardThumbnail>(
-      `/api/thumbnail/${boardId}/${position}`
-    );
-    return res.data;
-  } catch (err) {
-    if (isAxiosError(err) && err.response?.status === 404) return null;
-    throw err;
-  }
 }
 
 export async function deleteBoardThumbnail(boardId: string, position: number) {

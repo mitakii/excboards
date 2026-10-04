@@ -40,20 +40,14 @@ export function useBoard(id: string | undefined) {
   });
 }
 
-export function useBoardThumbnail(id: string | undefined, position = 1) {
-  return useQuery({
-    queryKey: ["boards", id, "thumbnail", position],
-    queryFn: () => boardsApi.getBoardThumbnail(id!, position),
-    enabled: !!id,
-    staleTime: 60_000,
-  });
-}
-
 export function useBoardThumbnails(id: string | undefined) {
   return useQuery({
     queryKey: ["boards", id, "thumbnails"],
     queryFn: () => boardsApi.listBoardThumbnails(id!),
     enabled: !!id,
+    // presigned download URLs expire after 10 minutes; refetching sooner would
+    // only swap in new URLs and make the browser download the images again
+    staleTime: 8 * 60_000,
   });
 }
 

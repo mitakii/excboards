@@ -4,7 +4,7 @@ import type { BoardTag } from "@/features/boards/api";
 
 export type SearchEnvelope<T> = PagedEnvelope<T>;
 
-/** Mirrors backend Contracts.Boards.BoardResponse. */
+/** Mirrors backend Domain.Dto.BoardSummaryDto. */
 export interface BoardSearchResult {
   id: string;
   ownerId: string;
@@ -13,14 +13,17 @@ export interface BoardSearchResult {
   isPublished: boolean;
   created: string;
   updated: string;
+  likesCount: number;
+  /** null when the viewer is anonymous. */
+  isLiked: boolean | null;
+  isBookmarked: boolean | null;
   tags: BoardTag[];
 }
 
-/** Mirrors backend Contracts.User.UserResponse. */
+/** Mirrors backend Application.Dto.UserDto. */
 export interface UserSearchResult {
   userId: string;
   username: string;
-  email: string;
   createdAtUtc: string;
   profilePictureUrl: string;
 }

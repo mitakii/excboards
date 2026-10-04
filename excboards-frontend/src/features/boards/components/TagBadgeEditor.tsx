@@ -46,7 +46,14 @@ export function TagBadgeEditor({
           placeholder="Add a tag"
           maxLength={40}
         />
-        <Button type="button" variant="outline" size="sm" onClick={addTag}>
+        {/* sized and bordered like the Input beside it */}
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          className="rounded-md border-input shadow-xs"
+          onClick={addTag}
+        >
           Add
         </Button>
       </div>

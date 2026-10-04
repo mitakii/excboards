@@ -3,9 +3,8 @@ import { HomeSearch } from "@/features/search/components/HomeSearch";
 import { staggerDelay } from "@/lib/utils";
 import { WorldBoardSection } from "@/features/worldBoard/components/WorldBoardSection";
 import { LandingHero } from "./components/LandingHero";
+import { HomeBoardTabs } from "./components/HomeBoardTabs";
 import { LatestBoardsSection } from "./components/LatestBoardsSection";
-import { RecentlyViewedSection } from "./components/RecentlyViewedSection";
-import { YourBoardsSection } from "./components/YourBoardsSection";
 
 const ENTRANCE_CLASS =
   "animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-backwards duration-400";
@@ -25,6 +24,15 @@ export function HomePage() {
         >
           <WorldBoardSection />
         </div>
+        <section
+          className={`mx-auto w-full max-w-6xl space-y-3 px-4 pb-12 ${ENTRANCE_CLASS}`}
+          style={staggerDelay(4, 100)}
+        >
+          <h2 className="text-lg font-semibold text-foreground">
+            Latest boards
+          </h2>
+          <LatestBoardsSection />
+        </section>
       </>
     );
   }
@@ -38,13 +46,7 @@ export function HomePage() {
         <WorldBoardSection />
       </div>
       <div className={ENTRANCE_CLASS} style={staggerDelay(2, 80)}>
-        <YourBoardsSection user={user} />
-      </div>
-      <div className={ENTRANCE_CLASS} style={staggerDelay(3, 80)}>
-        <RecentlyViewedSection />
-      </div>
-      <div className={ENTRANCE_CLASS} style={staggerDelay(4, 80)}>
-        <LatestBoardsSection />
+        <HomeBoardTabs user={user} />
       </div>
     </div>
   );

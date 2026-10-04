@@ -30,9 +30,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useStatus } from "@/features/auth/queries";
+import { BookmarkButton } from "@/features/bookmarks/components/BookmarkButton";
+import { LikeButton } from "@/features/likes/components/LikeButton";
 import { useUserById } from "@/features/profile/queries";
 import { getErrorMessage } from "@/lib/api";
-import { cn } from "@/lib/utils";
 import { PermissionLevel } from "../api";
 import {
   useBoard,
@@ -68,10 +69,29 @@ export function BoardOverviewDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setOpen}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent className="max-h-[85vh] w-[640px] max-w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-[calc(100vw-2rem)]">
+      {/* close button lives in BoardOverviewContent's header row, next to the other actions */}
+      <DialogContent
+        showCloseButton={false}
+        className="max-h-[85vh] w-[640px] max-w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-[calc(100vw-2rem)]">
         {isOpen && <BoardOverviewContent boardId={boardId} />}
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Replaces the dialog's built-in close button so it lines up with the header actions. */
+function OverviewCloseButton() {
+  return (
+    <DialogClose asChild>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="text-muted-foreground hover:text-foreground"
+      >
+        <XIcon />
+        <span className="sr-only">Close</span>
+      </Button>
+    </DialogClose>
   );
 }
 
@@ -93,17 +113,27 @@ function BoardOverviewContent({ boardId }: { boardId: string }) {
 
   if (board.isLoading) {
     return (
-      <div className="flex items-center justify-center py-10 text-muted-foreground">
-        <Spinner />
-      </div>
+      <>
+        <div className="flex justify-end">
+          <OverviewCloseButton />
+        </div>
+        <div className="flex items-center justify-center py-10 text-muted-foreground">
+          <Spinner />
+        </div>
+      </>
     );
   }
 
   if (board.isError || !board.data) {
     return (
-      <p className="py-8 text-center text-sm text-destructive">
-        {getErrorMessage(board.error, "Failed to load board.")}
-      </p>
+      <>
+        <div className="flex justify-end">
+          <OverviewCloseButton />
+        </div>
+        <p className="py-8 text-center text-sm text-destructive">
+          {getErrorMessage(board.error, "Failed to load board.")}
+        </p>
+      </>
     );
   }
 
@@ -159,8 +189,11 @@ function BoardOverviewContent({ boardId }: { boardId: string }) {
   if (editing) {
     return (
       <>
-        <DialogHeader>
-          <DialogTitle>Edit board</DialogTitle>
+        <DialogHeader className="flex-row items-start gap-2">
+          <DialogTitle className="min-w-0 flex-1">Edit board</DialogTitle>
+          <div className="-mt-1 shrink-0">
+            <OverviewCloseButton />
+          </div>
         </DialogHeader>
         <div className="min-w-0 space-y-4">
           <Field>
@@ -219,23 +252,35 @@ function BoardOverviewContent({ boardId }: { boardId: string }) {
 
   return (
     <>
-      {canEdit && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={startEditing}
-          className="absolute top-2 right-10"
-        >
-          <PencilIcon />
-          <span className="sr-only">Edit board</span>
-        </Button>
-      )}
-
-      <DialogHeader>
-        {/* Reserve room for the absolute close (and edit) buttons in the corner. */}
-        <DialogTitle className={cn("wrap-anywhere", canEdit ? "pr-14" : "pr-6")}>
+      <DialogHeader className="flex-row items-start gap-2">
+        <DialogTitle className="min-w-0 flex-1 wrap-anywhere">
           {data.name}
         </DialogTitle>
+        <div className="-mt-1 flex shrink-0 items-center">
+          <BookmarkButton
+            boardId={boardId}
+            isBookmarked={data.isBookmarked}
+            size="icon-sm"
+          />
+          <LikeButton
+            boardId={boardId}
+            isLiked={data.isLiked}
+            likesCount={data.likesCount}
+            size="sm"
+          />
+          {canEdit && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={startEditing}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <PencilIcon />
+              <span className="sr-only">Edit board</span>
+            </Button>
+          )}
+          <OverviewCloseButton />
+        </div>
       </DialogHeader>
 
       <div className="min-w-0 space-y-4">

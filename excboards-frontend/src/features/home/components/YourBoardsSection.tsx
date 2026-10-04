@@ -24,13 +24,15 @@ export function YourBoardsSection({ user }: { user: AuthUser }) {
     owner: { username: user.userName },
     updatedAt: new Date(board.updated).toLocaleDateString(),
     isPublished: board.isPublished,
+    isBookmarked: board.isBookmarked,
+    likesCount: board.likesCount,
+    isLiked: board.isLiked,
   }));
 
   const isEmpty = boards.isSuccess && items.length === 0;
 
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold text-foreground">Your boards</h2>
       {isEmpty ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-10 text-center">

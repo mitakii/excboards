@@ -53,10 +53,13 @@ export function ProfilePage() {
     owner: { username: profile.data.username, pfpUrl: profile.data.profilePictureUrl },
     updatedAt: new Date(board.updated).toLocaleDateString(),
     isPublished: board.isPublished,
+    isBookmarked: board.isBookmarked,
+    likesCount: board.likesCount,
+    isLiked: board.isLiked,
   }));
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-8">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
       <ProfileInfoCard profile={profile.data} isOwnProfile={isOwnProfile} />
 
       <div className="min-w-0 space-y-4">

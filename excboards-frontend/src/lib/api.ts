@@ -1,6 +1,6 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 
-/** Mirrors backend Contracts.Search.SearchResponse<T> (camel-cased) — the
+/** Mirrors backend Contracts.PagedResponse<T> (camel-cased) — the
  * paged-list envelope shared by search and other paginated board endpoints. */
 export interface PagedEnvelope<T> {
   result: T[];

@@ -19,6 +19,9 @@ export function BoardResults({ boards }: { boards: BoardSearchResult[] }) {
         : undefined,
       updatedAt: new Date(board.updated).toLocaleDateString(),
       isPublished: board.isPublished,
+      isBookmarked: board.isBookmarked,
+      likesCount: board.likesCount,
+      isLiked: board.isLiked,
     };
   });
 

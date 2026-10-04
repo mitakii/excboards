@@ -19,17 +19,18 @@ export function RecentlyViewedSection() {
         : undefined,
       updatedAt: new Date(board.updated).toLocaleDateString(),
       isPublished: board.isPublished,
+      isBookmarked: board.isBookmarked,
+      likesCount: board.likesCount,
+      isLiked: board.isLiked,
     };
   });
 
-  if (items.length === 0) return null;
-
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold text-foreground">
-        Recently viewed
-      </h2>
-      <BoardList boards={items} emptyMessage="" />
+      <BoardList
+        boards={items}
+        emptyMessage="Boards you open will show up here."
+      />
     </section>
   );
 }
