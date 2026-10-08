@@ -4,5 +4,5 @@ namespace excboards_api.Contracts.Search;
 
 public record SearchRequest(
     [Required, MinLength(1)]string Query, 
-    [Required] int Page = 1, 
+    string? Cursor = null,
     [Required] int PageSize = 10);

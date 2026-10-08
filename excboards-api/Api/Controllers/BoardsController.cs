@@ -1,5 +1,6 @@
 using Application.Boards;
 using Application.Dto;
+using Application.Storage;
 using Domain.Dto;
 using excboards_api.Contracts;
 using excboards_api.Contracts.Boards;
@@ -8,22 +9,29 @@ using excboards_api.Extensions;
 using excboards_api.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 
 namespace excboards_api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
 public class BoardsController
     (BoardService boardService, BoardCollaboratorService boardCollaboratorService, IHubContext<CanvasHub> hubContext, 
-        ILogger<BoardsController> logger) : ControllerBase
+        ILogger<BoardsController> logger, UploadLimitsOptions uploadLimits) : ControllerBase
 {
     private const int MaxPageSize = 50;
 
+    [Authorize]
     [HttpPost]
+    [RequestSizeLimit(SceneRequestLimits.MaxRequestBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = SceneRequestLimits.MaxRequestBytes)]
     public async Task<IActionResult> Create([FromForm] CreateBoardRequest request)
     {
+        var sizeCheck = UploadValidator.ValidateScene(request.Scene.Length, uploadLimits);
+        if (sizeCheck.IsError)
+            return sizeCheck.ToProblem(this);
+
         await using var stream = request.Scene.OpenReadStream();
         
         var result = await boardService
@@ -33,7 +41,8 @@ public class BoardsController
 
         return Created($"/api/boards/{result.Value}", result.Value);
     }
-
+    
+    [Authorize]
     [HttpPatch("publish/{boardId:guid}")]
     public async Task<IActionResult> PublishBoard(Guid boardId)
     {
@@ -43,7 +52,8 @@ public class BoardsController
         
         return Ok();
     }
-
+    
+    [Authorize]
     [HttpPatch("{boardId:guid}")]
     public async Task<IActionResult> UpdateBoard(Guid boardId, [FromBody] BoardUpdateRequest request)
     {
@@ -60,7 +70,8 @@ public class BoardsController
         
         return Ok();
     }
-
+    
+    [Authorize]
     [HttpDelete("{boardId:guid}")]
     public async Task<IActionResult> Delete(Guid boardId)
     {
@@ -73,67 +84,113 @@ public class BoardsController
 
     [AllowAnonymous]
     [HttpGet("u/{userId:guid}")]
-    public async Task<IActionResult> GetUserBoards(Guid userId, [FromQuery] PagedRequest request)
+    public async Task<IActionResult> GetUserBoards(Guid userId, [FromQuery] CursorRequest request)
     {
-        var page = Math.Max(request.Page, 1);
+        if (!PageCursor.TryParseTime(request.Cursor, out var cursor))
+            return this.InvalidCursor();
         var pageSize = Math.Clamp(request.PageSize, 1, MaxPageSize);
 
         var result = await boardService
-            .GetUserBoards(userId, User.TryGetUserId(), page, pageSize);
+            .GetUserBoards(userId, User.TryGetUserId(), cursor, pageSize);
         if (result.IsError)
             return result.ToProblem(this);
 
-        return Ok(new PagedResponse<BoardSummaryDto>(
-            result.Value.Data,
-            result.Value.Total,
-            result.Value.Page,
-            result.Value.PageSize)
-        );
+        return Ok(result.Value.ToResponse());
+    }
+
+    [AllowAnonymous]
+    [HttpGet("u/{userId:guid}/contributed")]
+    public async Task<IActionResult> GetContributedBoards(Guid userId, [FromQuery] CursorRequest request)
+    {
+        if (!PageCursor.TryParseTime(request.Cursor, out var cursor))
+            return this.InvalidCursor();
+        var pageSize = Math.Clamp(request.PageSize, 1, MaxPageSize);
+
+        var result = await boardService
+            .GetContributedBoardsAsync(userId, User.TryGetUserId(), cursor, pageSize);
+        if (result.IsError)
+            return result.ToProblem(this);
+
+        return Ok(result.Value.ToResponse());
+    }
+
+    [AllowAnonymous]
+    [HttpGet("u/{userId:guid}/liked")]
+    public async Task<IActionResult> GetLikedBoards(Guid userId, [FromQuery] CursorRequest request)
+    {
+        if (!PageCursor.TryParseTime(request.Cursor, out var cursor))
+            return this.InvalidCursor();
+        var pageSize = Math.Clamp(request.PageSize, 1, MaxPageSize);
+
+        var result = await boardService
+            .GetLikedBoardsAsync(userId, User.TryGetUserId(), cursor, pageSize);
+        if (result.IsError)
+            return result.ToProblem(this);
+
+        return Ok(result.Value.ToResponse());
+    }
+
+    [AllowAnonymous]
+    [HttpGet("u/{userId:guid}/stats")]
+    public async Task<IActionResult> GetUserStats(Guid userId)
+    {
+        var result = await boardService.GetUserStatsAsync(userId);
+        if (result.IsError)
+            return result.ToProblem(this);
+
+        return Ok(result.Value);
     }
 
     [AllowAnonymous]
     [HttpGet("latest")]
-    public async Task<IActionResult> GetLatestBoards([FromQuery] PagedRequest request)
+    public async Task<IActionResult> GetLatestBoards([FromQuery] CursorRequest request)
     {
-        var page = Math.Max(request.Page, 1);
+        if (!PageCursor.TryParseTime(request.Cursor, out var cursor))
+            return this.InvalidCursor();
         var pageSize = Math.Clamp(request.PageSize, 1, MaxPageSize);
 
         var result = await boardService
-            .GetLatestBoardsAsync(User.TryGetUserId(), page, pageSize);
+            .GetLatestBoardsAsync(User.TryGetUserId(), cursor, pageSize);
         if(result.IsError)
             return result.ToProblem(this);
 
-        return Ok(new PagedResponse<BoardSummaryDto>(
-            result.Value.Data,
-            result.Value.Total,
-            result.Value.Page,
-            result.Value.PageSize)
-        );
+        return Ok(result.Value.ToResponse());
     }
     
+    [AllowAnonymous]
     [HttpGet("{boardId:guid}")]
     public async Task<IActionResult> GetById(Guid boardId)
     {
-        var result = await boardService.GetByIdAsync(User.GetUserId(), boardId);
+        var result = await boardService.GetByIdAsync(User.TryGetUserId(), boardId);
         if (result.IsError)
             return result.ToProblem(this);
         
         return Ok(result.Value);
     }
 
+    [AllowAnonymous]
     [HttpGet("{boardId:guid}/scene")]
     public async Task<IActionResult> GetScene(Guid boardId)
     {
-        var result = await boardService.GetSceneAsync(User.GetUserId(), boardId);
+        var result = await boardService.GetSceneAsync(User.TryGetUserId(), boardId);
         if (result.IsError)
             return result.ToProblem(this);
 
         return File(result.Value, "application/json");
     }
-
+    
+    [Authorize]
     [HttpPut("{boardId:guid}/scene")]
+    [HttpPost("{boardId:guid}/scene")]
+    [EnableRateLimiting(RateLimitPolicies.SceneSave)]
+    [RequestSizeLimit(SceneRequestLimits.MaxRequestBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = SceneRequestLimits.MaxRequestBytes)]
     public async Task<IActionResult> SaveScene(Guid boardId, [FromForm] SaveSceneRequest request)
     {
+        var sizeCheck = UploadValidator.ValidateScene(request.Scene.Length, uploadLimits);
+        if (sizeCheck.IsError)
+            return sizeCheck.ToProblem(this);
+
         await using var stream = request.Scene.OpenReadStream();
 
         var result = await boardService.SaveSceneAsync(User.GetUserId(), boardId, request.SceneHash, stream);
@@ -155,7 +212,8 @@ public class BoardsController
         
         return Ok();
     }
-
+    
+    [AllowAnonymous]
     [HttpPost("{boardId:guid}/downloadUrls")]
     public async Task<IActionResult> GetFilePresignedUrls(Guid boardId, [FromBody] BoardPresignedUrlsRequest request)
     {
@@ -163,34 +221,39 @@ public class BoardsController
             return BadRequest();
         
         var result = await boardService
-            .GetDownloadPresignedUrls(User.GetUserId(), boardId, request.FileIds);
+            .GetDownloadPresignedUrls(User.TryGetUserId(), boardId, request.FileIds);
         if(result.IsError)
             return result.ToProblem(this);
         
         return Ok(result.Value);
     }
     
+    [AllowAnonymous]
     [HttpGet("{boardId:guid}/downloadUrl/{fileId}")]
     public async Task<IActionResult> GetFilePresignedUrl(Guid boardId, string fileId)
     {
         var result = await boardService
-            .GetDownloadPresignedUrl(User.GetUserId(), boardId, fileId);
+            .GetDownloadPresignedUrl(User.TryGetUserId(), boardId, fileId);
         if(result.IsError)
             return result.ToProblem(this);
 
         return Ok(result.Value);
     }
-
-    [HttpGet("{boardId:guid}/uploadUrl/{fileId}")]
-    public async Task<IActionResult> GetUploadUrl(Guid boardId, string fileId)
+    
+    [Authorize]
+    [HttpPost("{boardId:guid}/uploadUrl")]
+    [EnableRateLimiting(RateLimitPolicies.UploadUrl)]
+    public async Task<IActionResult> GetUploadUrl(Guid boardId, [FromBody] UploadUrlRequest request)
     {
-        var result = await boardService.GetUploadPresignedUrl(User.GetUserId(), boardId, fileId);
+        var result = await boardService.GetUploadPresignedUrl(
+            User.GetUserId(), boardId, request.FileId, request.Size, request.MimeType);
         if (result.IsError)
             return result.ToProblem(this);
         
         return Ok(result.Value);
     }
 
+    [Authorize]
     [HttpPost("{boardId:guid}/collaborators")]
     public async Task<IActionResult> AddCollaborator(Guid boardId, [FromBody] AddCollaboratorRequest request)
     {
@@ -202,6 +265,7 @@ public class BoardsController
         return Created();
     }
 
+    [Authorize]
     [HttpPut("{boardId:guid}/collaborators/{userId:guid}")]
     public async Task<IActionResult> UpdateCollaborator
         (Guid boardId, Guid userId, [FromBody] UpdateCollaboratorRequest request)
@@ -214,6 +278,7 @@ public class BoardsController
         return Ok();
     }
 
+    [Authorize]
     [HttpDelete("{boardId:guid}/collaborators/{userId:guid}")]
     public async Task<IActionResult> RemoveCollaborator(Guid boardId, Guid userId)
     {
@@ -224,11 +289,12 @@ public class BoardsController
 
         return Ok();
     }
-
+    
+    [AllowAnonymous]
     [HttpGet("{boardId:guid}/collaborators")]
     public async Task<IActionResult> GetBoardCollaborators(Guid boardId)
     {
-        var result = await boardCollaboratorService.GetAllBoardCollaborators(boardId, User.GetUserId());
+        var result = await boardCollaboratorService.GetAllBoardCollaborators(boardId, User.TryGetUserId());
         
         if(result.IsError)
             return result.ToProblem(this);

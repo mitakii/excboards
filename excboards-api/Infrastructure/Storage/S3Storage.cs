@@ -5,41 +5,51 @@ using Application.Dto;
 using Application.Interfaces;
 using Application.Storage;
 using Microsoft.Extensions.Options;
-using Minio;
 
 namespace Infrastructure.Storage;
 
-public class MinioStorage
+public class S3Storage
 {
     private readonly AmazonS3Client _client;
     private readonly string _bucketName;
     private readonly string _scheme;
+    private readonly bool _autoCreateBucket;
+    private volatile bool _bucketEnsured;
 
-    public MinioStorage(IOptions<MinioOptions> options)
+    public S3Storage(IOptions<S3Options> options)
     {
         var settings = options.Value;
         var config = new AmazonS3Config
         {
-            ServiceURL = settings.ServiceURL, // e.g. http://localhost:9000
-            ForcePathStyle = true // Required for MinIO
+            ServiceURL = settings.ServiceURL, // e.g. http://localhost:9000 or https://<account>.r2.cloudflarestorage.com
+            AuthenticationRegion = settings.Region,
+            ForcePathStyle = true,
+            // SDK v4 adds CRC checksums to every request by default; non-AWS backends (R2, MinIO)
+            // don't all handle that, so only send them where the S3 API requires it.
+            RequestChecksumCalculation = RequestChecksumCalculation.WHEN_REQUIRED,
+            ResponseChecksumValidation = ResponseChecksumValidation.WHEN_REQUIRED
         };
 
         var credentials = new BasicAWSCredentials(settings.AccessKey, settings.SecretKey);
         _client = new AmazonS3Client(credentials, config);
         _bucketName = settings.BucketName;
         _scheme = new Uri(settings.ServiceURL).Scheme;
+        _autoCreateBucket = settings.AutoCreateBucket;
     }
-    
+
     private string WithConfiguredScheme(string presignedUrl) =>
         new UriBuilder(presignedUrl) { Scheme = _scheme }.Uri.ToString();
 
     private async Task EnsureBucketExistsAsync()
     {
+        if (!_autoCreateBucket || _bucketEnsured) return;
+
         var exists = await BucketExistsAsync(_bucketName);
         if (!exists)
         {
             await _client.PutBucketAsync(new PutBucketRequest { BucketName = _bucketName });
         }
+        _bucketEnsured = true;
     }
 
     private async Task<bool> BucketExistsAsync(string bucketName)
@@ -65,7 +75,10 @@ public class MinioStorage
         {
             BucketName = _bucketName,
             Key = key,
-            InputStream = fileStream
+            InputStream = fileStream,
+            // R2 doesn't support streaming SigV4 (aws-chunked) uploads. Unsigned payloads are
+            // only allowed over HTTPS, so local plain-HTTP backends keep the signed path.
+            DisablePayloadSigning = _scheme == Uri.UriSchemeHttps
         };
 
         await _client.PutObjectAsync(request);
@@ -77,17 +90,23 @@ public class MinioStorage
         return response.ResponseStream;
     }
 
-    public async Task<string> GetPresignedUploadUrlAsync(string key, TimeSpan expiry)
+    public async Task<string> GetPresignedUploadUrlAsync(string key, TimeSpan expiry, string contentType, long contentLength)
     {
         await EnsureBucketExistsAsync();
 
-        var url = await _client.GetPreSignedURLAsync(new GetPreSignedUrlRequest
+        // Content-Type and Content-Length become SigV4 signed headers, so storage rejects
+        // (403) a PUT whose body size or type differs from what the API validated.
+        var request = new GetPreSignedUrlRequest
         {
             BucketName = _bucketName,
             Key = key,
             Verb = HttpVerb.PUT,
-            Expires = DateTime.UtcNow.Add(expiry)
-        });
+            Expires = DateTime.UtcNow.Add(expiry),
+            ContentType = contentType
+        };
+        request.Headers.ContentLength = contentLength;
+
+        var url = await _client.GetPreSignedURLAsync(request);
         return WithConfiguredScheme(url);
     }
 
@@ -142,7 +161,7 @@ public class MinioStorage
             var response = await _client.ListObjectsV2Async(request);
             if (response.S3Objects is not null)
             {
-                result.AddRange(response.S3Objects.Select(o => new StorageObjectInfo(o.Key, o.LastModified!.Value)));
+                result.AddRange(response.S3Objects.Select(o => new StorageObjectInfo(o.Key, o.LastModified!.Value, o.Size ?? 0)));
             }
             request.ContinuationToken = response.NextContinuationToken;
         } while (!string.IsNullOrEmpty(request.ContinuationToken));

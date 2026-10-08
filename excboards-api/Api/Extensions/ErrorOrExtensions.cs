@@ -27,6 +27,8 @@ public static class ErrorOrExtensions
             ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
             ErrorType.Forbidden => StatusCodes.Status403Forbidden,
             ErrorType.Validation => StatusCodes.Status400BadRequest,
+            // Error.Custom(statusCode, ...) carries an HTTP status directly (e.g. 413/415).
+            _ when firstError.NumericType is >= 400 and < 600 => firstError.NumericType,
             _ => StatusCodes.Status500InternalServerError,
         };
 

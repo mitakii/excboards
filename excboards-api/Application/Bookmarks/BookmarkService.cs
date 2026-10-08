@@ -7,10 +7,10 @@ namespace Application.Bookmarks;
 
 public class BookmarkService(IBoardBookmarkRepository bookmarkRepository, IPermissionService permissionService)
 {
-    public async Task<ErrorOr<PagedResult<BookmarkedBoardDto>>> GetBookmarkedBoardsPagedAsync(Guid userId, int pageNumber,
+    public async Task<ErrorOr<CursorPage<BookmarkedBoardDto>>> GetBookmarkedBoardsPagedAsync(Guid userId, TimeCursor? cursor,
         int pageSize)
     {
-        return await bookmarkRepository.GetBookmarkedBoardsPagedAsync(userId, pageNumber, pageSize);
+        return await bookmarkRepository.GetBookmarkedBoardsPagedAsync(userId, cursor, pageSize);
     }
 
     public async Task<ErrorOr<Success>> AddBookmarkAsync(Guid userId, Guid boardId)

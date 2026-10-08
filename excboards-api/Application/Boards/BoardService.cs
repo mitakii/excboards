@@ -13,8 +13,11 @@ namespace Application.Boards;
 public class BoardService(IBoardRepository boardRepository, 
     IFileRepository fileRepository,
     IPermissionService permissionService,
-    ITagRepository tagRepository)
+    ITagRepository tagRepository,
+    UploadLimitsOptions uploadLimits)
 {
+    private static readonly TimeSpan UploadUrlExpiry = TimeSpan.FromMinutes(5);
+
     public async Task<ErrorOr<Guid>> CreateAsync(Guid userId, string name, string description, List<string>? tags, Stream stream)
     {
         name = name.Trim();
@@ -57,15 +60,15 @@ public class BoardService(IBoardRepository boardRepository,
         return board.Id;
     }
 
-    public async Task<ErrorOr<PagedResult<BoardSummaryDto>>> SearchAsync(Guid? userId, string query, int page = 1, int pageSize = 10)
+    public async Task<ErrorOr<CursorPage<BoardSummaryDto>>> SearchAsync(Guid? userId, string query, TimeCursor? cursor, int pageSize)
     {
         if(string.IsNullOrWhiteSpace(query))
             return Error.Validation("Board.SearchQuery", "Search query is required.");
         
-        return await boardRepository.SearchAsync(userId, query, page, pageSize);
+        return await boardRepository.SearchAsync(userId, query, cursor, pageSize);
     }
 
-    public async Task<ErrorOr<PagedResult<BoardSummaryDto>>> SearchByTagsAsync(Guid? userId, List<string> tags, int page = 1, int pageSize = 10)
+    public async Task<ErrorOr<CursorPage<BoardSummaryDto>>> SearchByTagsAsync(Guid? userId, List<string> tags, TimeCursor? cursor, int pageSize)
     {
         var names = tags
             .Select(t => t.Trim().TrimStart('#').Trim())
@@ -79,18 +82,12 @@ public class BoardService(IBoardRepository boardRepository,
         var tagIds = await tagRepository.GetTagsIdsByNameAsync(names);
         
         if (tagIds.Count < names.Count)
-            return new PagedResult<BoardSummaryDto>
-            {
-                Data = [],
-                Page = page,
-                PageSize = pageSize,
-                Total = 0
-            };
+            return new CursorPage<BoardSummaryDto> { Data = [], Total = 0 };
 
-        return await boardRepository.SearchByTagsAsync(userId, tagIds, page, pageSize);
+        return await boardRepository.SearchByTagsAsync(userId, tagIds, cursor, pageSize);
     }
     
-    public async Task<ErrorOr<BoardSummaryDto>> GetByIdAsync(Guid userId, Guid boardId)
+    public async Task<ErrorOr<BoardSummaryDto>> GetByIdAsync(Guid? userId, Guid boardId)
     {
         if (!await permissionService.CanViewAsync(userId, boardId))
             return Error.NotFound("Board.NotFound", "Board not found");
@@ -102,12 +99,12 @@ public class BoardService(IBoardRepository boardRepository,
         return board;
     }
 
-    public async Task<ErrorOr<PagedResult<BoardSummaryDto>>> GetLatestBoardsAsync(Guid? userId, int page, int pageSize)
+    public async Task<ErrorOr<CursorPage<BoardSummaryDto>>> GetLatestBoardsAsync(Guid? userId, TimeCursor? cursor, int pageSize)
     {
-        return await boardRepository.GetLatestPagedAsync(userId, page, pageSize);
+        return await boardRepository.GetLatestPagedAsync(userId, cursor, pageSize);
     }
 
-    public async Task<ErrorOr<Stream>> GetSceneAsync(Guid userId, Guid boardId)
+    public async Task<ErrorOr<Stream>> GetSceneAsync(Guid? userId, Guid boardId)
     {
         var board = await boardRepository.GetByIdAsync(boardId);
         if (board == null)
@@ -248,13 +245,32 @@ public class BoardService(IBoardRepository boardRepository,
         return Result.Updated;
     }
 
-    public async Task<ErrorOr<PagedResult<BoardSummaryDto>>> GetUserBoards(Guid requestUserId, Guid? currentUserId, int pageNumber, int pageSize)
+    public async Task<ErrorOr<CursorPage<BoardSummaryDto>>> GetUserBoards(Guid requestUserId, Guid? currentUserId, TimeCursor? cursor, int pageSize)
     {
         return await boardRepository
-            .GetAllByUserIdPagedAsync(requestUserId, currentUserId, pageNumber, pageSize);
+            .GetAllByUserIdPagedAsync(requestUserId, currentUserId, cursor, pageSize);
     }
 
-    public async Task<ErrorOr<Dictionary<string, string>>> GetDownloadPresignedUrls(Guid userId, Guid boardId, List<string> sceneFileIds)
+    public async Task<ErrorOr<CursorPage<BoardSummaryDto>>> GetContributedBoardsAsync(Guid userId, Guid? viewerId, TimeCursor? cursor, int pageSize)
+    {
+        return await boardRepository.GetContributedPagedAsync(userId, viewerId, cursor, pageSize);
+    }
+
+    public async Task<ErrorOr<CursorPage<BoardSummaryDto>>> GetLikedBoardsAsync(Guid userId, Guid? viewerId, TimeCursor? cursor, int pageSize)
+    {
+        return await boardRepository.GetLikedPagedAsync(userId, viewerId, cursor, pageSize);
+    }
+
+    public async Task<ErrorOr<UserBoardStatsDto>> GetUserStatsAsync(Guid userId)
+    {
+        var stats = await boardRepository.GetUserBoardStatsAsync(userId);
+        if (stats == null)
+            return Error.NotFound("User.NotFound", "User not found");
+
+        return stats;
+    }
+
+    public async Task<ErrorOr<Dictionary<string, string>>> GetDownloadPresignedUrls(Guid? userId, Guid boardId, List<string> sceneFileIds)
     {
         if(!await permissionService.CanViewAsync(userId, boardId))
             return Error.NotFound("Board.NotFound", "Board not found");
@@ -268,7 +284,7 @@ public class BoardService(IBoardRepository boardRepository,
         return result.ToDictionary(k => k.FileId, v => v.FileUrl);
     }
 
-    public async Task<ErrorOr<string>> GetDownloadPresignedUrl(Guid userId, Guid boardId, string fileId)
+    public async Task<ErrorOr<string>> GetDownloadPresignedUrl(Guid? userId, Guid boardId, string fileId)
     {
         if (!await permissionService.CanViewAsync(userId, boardId))
             return Error.NotFound("Board.NotFound", "Board not found");
@@ -278,15 +294,20 @@ public class BoardService(IBoardRepository boardRepository,
         return result;
     }
 
-    public async Task<ErrorOr<string>> GetUploadPresignedUrl(Guid userId, Guid boardId, string fileId)
+    public async Task<ErrorOr<string>> GetUploadPresignedUrl(Guid userId, Guid boardId, string fileId, long size, string mimeType)
     {
         if (!await permissionService.CanViewAsync(userId, boardId))
             return Error.NotFound("Board.NotFound", "Board not found");
         if (!await permissionService.CanEditAsync(userId, boardId))
             return Error.Forbidden("Board.Forbidden", "User cant edit board");
 
+        var valid = await UploadValidator.ValidateBoardFileAsync(
+            fileRepository, uploadLimits, boardId, fileId, size, mimeType);
+        if (valid.IsError)
+            return valid.Errors;
+
         var result = await fileRepository
-            .GetUploadUrlAsync(BoardFileKeys.File(boardId, fileId), TimeSpan.FromMinutes(10));
+            .GetUploadUrlAsync(BoardFileKeys.File(boardId, fileId), UploadUrlExpiry, mimeType, size);
         return result;
     }
 }

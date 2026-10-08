@@ -60,6 +60,7 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
+builder.Services.AddExcboardsRateLimiting();
 
 builder.Services.AddSignalR();
 builder.Services.AddHangfire(config => 
@@ -81,6 +82,7 @@ app.UseCors("ExcboardsFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 //todo: add auth
 app.MapHangfireDashboard("/hangfire");

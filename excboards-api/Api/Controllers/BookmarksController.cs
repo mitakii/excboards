@@ -15,20 +15,17 @@ public class BookmarksController(BookmarkService bookmarkService) : ControllerBa
     private const int MaxPageSize = 50;
 
     [HttpGet]
-    public async Task<IActionResult> GetBookmarkedBoards([FromQuery] PagedRequest request)
+    public async Task<IActionResult> GetBookmarkedBoards([FromQuery] CursorRequest request)
     {
-        var page = Math.Max(request.Page, 1);
+        if (!PageCursor.TryParseTime(request.Cursor, out var cursor))
+            return this.InvalidCursor();
         var pageSize = Math.Clamp(request.PageSize, 1, MaxPageSize);
 
-        var result = await bookmarkService.GetBookmarkedBoardsPagedAsync(User.GetUserId(), page, pageSize);
+        var result = await bookmarkService.GetBookmarkedBoardsPagedAsync(User.GetUserId(), cursor, pageSize);
         if (result.IsError)
             return result.ToProblem(this);
 
-        return Ok(new PagedResponse<BookmarkedBoardDto>(
-            result.Value.Data,
-            result.Value.Total,
-            result.Value.Page,
-            result.Value.PageSize));
+        return Ok(result.Value.ToResponse());
     }
     
     [HttpPut("{boardId:guid}")]

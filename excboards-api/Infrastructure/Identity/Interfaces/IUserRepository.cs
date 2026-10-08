@@ -5,5 +5,5 @@ namespace Infrastructure.Identity.Interfaces;
 
 public interface IUserRepository
 {
-    public Task<PagedResult<UserDto>> SearchUsersAsync(string query, int page, int pageSize);
+    public Task<CursorPage<UserDto>> SearchUsersAsync(string query, PageCursor? cursor, int pageSize);
 }

@@ -24,7 +24,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Minio;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure;
 
@@ -77,11 +77,14 @@ public static class InfrastructureServiceCollectionExtensions
     
     public static IHostApplicationBuilder AddStorage(this IHostApplicationBuilder builder)
     {
-        builder.Services.Configure<MinioOptions>(builder.Configuration.GetSection("Minio"));
+        builder.Services.Configure<S3Options>(builder.Configuration.GetSection("S3"));
+        builder.Services.Configure<UploadLimitsOptions>(builder.Configuration.GetSection("UploadLimits"));
+        // Application services take the plain value (Application has no Options dependency).
+        builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<UploadLimitsOptions>>().Value);
         builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
-        
-        builder.Services.AddSingleton<MinioStorage>();
-        builder.Services.AddScoped<IFileRepository, MinioFileRepository>();
+
+        builder.Services.AddSingleton<S3Storage>();
+        builder.Services.AddScoped<IFileRepository, S3FileRepository>();
         builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
         
         return builder;

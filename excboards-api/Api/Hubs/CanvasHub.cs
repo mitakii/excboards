@@ -13,12 +13,11 @@ public class CanvasHub(IPermissionService permissionService) : Hub
     
     public async Task JoinRoom(Guid boardId)
     {
-        if (!await permissionService.WorldBoardExistsAsync(boardId))
-        {
-            if (Context.User?.Identity?.IsAuthenticated != true
-                || !await permissionService.CanViewAsync(Context.User.GetUserId(), boardId))
-                throw new HubException("Not authorized to join this board.");
-        }
+        // anonymous connections may join published boards to watch live edits;
+        // BroadcastElements stays [Authorize] + edit-checked, so they can't send any
+        if (!await permissionService.WorldBoardExistsAsync(boardId)
+            && !await permissionService.CanViewAsync(Context.User?.TryGetUserId(), boardId))
+            throw new HubException("Not authorized to join this board.");
 
         await Groups.AddToGroupAsync(Context.ConnectionId, boardId.ToString());
     }

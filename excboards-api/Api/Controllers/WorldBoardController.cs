@@ -1,4 +1,5 @@
 using Application.Dto;
+using Application.Storage;
 using Application.WorldBoards;
 using excboards_api.Contracts;
 using excboards_api.Contracts.Boards;
@@ -7,6 +8,7 @@ using excboards_api.Extensions;
 using excboards_api.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 
 namespace excboards_api.Controllers;
@@ -17,7 +19,8 @@ namespace excboards_api.Controllers;
 public class WorldBoardController(
     WorldBoardService worldBoardService,
     ILogger<WorldBoardController> logger,
-    IHubContext<CanvasHub> hubContext) : ControllerBase
+    IHubContext<CanvasHub> hubContext,
+    UploadLimitsOptions uploadLimits) : ControllerBase
 {
     private const int MaxPageSize = 50;
 
@@ -102,8 +105,16 @@ public class WorldBoardController(
 
     // save scene to file storage
     [HttpPut("{boardId:guid}/scene")]
+    [HttpPost("{boardId:guid}/scene")]
+    [EnableRateLimiting(RateLimitPolicies.SceneSave)]
+    [RequestSizeLimit(SceneRequestLimits.MaxRequestBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = SceneRequestLimits.MaxRequestBytes)]
     public async Task<IActionResult> SaveScene(Guid boardId, [FromForm] SaveSceneRequest request)
     {
+        var sizeCheck = UploadValidator.ValidateScene(request.Scene.Length, uploadLimits);
+        if (sizeCheck.IsError)
+            return sizeCheck.ToProblem(this);
+
         await using var stream = request.Scene.OpenReadStream();
 
         var result = await worldBoardService.SaveSceneAsync(User.GetUserId(), boardId, request.SceneHash, stream);
@@ -127,6 +138,7 @@ public class WorldBoardController(
     }
 
     // get presigned links upload/download
+    
     [AllowAnonymous]
     [HttpPost("{boardId:guid}/downloadUrls")]
     public async Task<IActionResult> GetFilePresignedUrls(Guid boardId, [FromBody] BoardPresignedUrlsRequest request)
@@ -142,10 +154,12 @@ public class WorldBoardController(
         return Ok(result.Value);
     }
 
-    [HttpGet("{boardId:guid}/uploadUrl/{fileId}")]
-    public async Task<IActionResult> GetUploadUrl(Guid boardId, string fileId)
+    [HttpPost("{boardId:guid}/uploadUrl")]
+    [EnableRateLimiting(RateLimitPolicies.UploadUrl)]
+    public async Task<IActionResult> GetUploadUrl(Guid boardId, [FromBody] UploadUrlRequest request)
     {
-        var result = await worldBoardService.GetUploadPresignedUrl(User.GetUserId(), boardId, fileId);
+        var result = await worldBoardService.GetUploadPresignedUrl(
+            User.GetUserId(), boardId, request.FileId, request.Size, request.MimeType);
         if (result.IsError)
             return result.ToProblem(this);
 

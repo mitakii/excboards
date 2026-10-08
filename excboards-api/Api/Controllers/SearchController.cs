@@ -15,15 +15,26 @@ namespace excboards_api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class SearchController(BoardService boardService, TagService tagService, IUserService userService, ILogger<SearchController> logger) : ControllerBase
+public class SearchController(
+    BoardService boardService, 
+    TagService tagService, 
+    IUserService userService, 
+    ILogger<SearchController> logger) : ControllerBase
 {
+    private const int MaxPageSize = 50;
+    private static int ClampPageSize(int pageSize) => Math.Clamp(pageSize, 1, MaxPageSize);
+
     [HttpGet("board")]
     public async Task<IActionResult> SearchBoard([FromQuery] SearchRequest searchRequest)
     {
         if (string.IsNullOrWhiteSpace(searchRequest.Query))
             return NotFound();
 
-        var result = await boardService.SearchAsync(User.TryGetUserId(), searchRequest.Query, searchRequest.Page, searchRequest.PageSize);
+        if (!PageCursor.TryParseTime(searchRequest.Cursor, out var cursor))
+            return this.InvalidCursor();
+
+        var result = await boardService
+            .SearchAsync(User.TryGetUserId(), searchRequest.Query, cursor, ClampPageSize(searchRequest.PageSize));
 
         if (result.IsError)
         {
@@ -31,12 +42,7 @@ public class SearchController(BoardService boardService, TagService tagService, 
             return result.ToProblem(this);
         }
         
-        return Ok(new PagedResponse<BoardSummaryDto>(
-                Result: result.Value.Data,
-                result.Value.Total, 
-                result.Value.Page, 
-                result.Value.PageSize)
-        );
+        return Ok(result.Value.ToResponse());
     }
     
     [HttpGet("tag")]
@@ -51,7 +57,12 @@ public class SearchController(BoardService boardService, TagService tagService, 
             .Where(t => t.Length > 0)
             .ToList();
 
-        var result = await boardService.SearchByTagsAsync(User.TryGetUserId(), tags, searchRequest.Page, searchRequest.PageSize);
+        if (!PageCursor.TryParseTime(searchRequest.Cursor, out var cursor))
+            return this.InvalidCursor();
+
+        var result = await boardService
+            .SearchByTagsAsync(
+                User.TryGetUserId(), tags, cursor, ClampPageSize(searchRequest.PageSize));
 
         if (result.IsError)
         {
@@ -59,12 +70,7 @@ public class SearchController(BoardService boardService, TagService tagService, 
             return result.ToProblem(this);
         }
 
-        return Ok(new PagedResponse<BoardSummaryDto>(
-                Result: result.Value.Data,
-                result.Value.Total,
-                result.Value.Page,
-                result.Value.PageSize)
-        );
+        return Ok(result.Value.ToResponse());
     }
     
     [HttpGet("user")]
@@ -73,7 +79,11 @@ public class SearchController(BoardService boardService, TagService tagService, 
         if (string.IsNullOrWhiteSpace(searchRequest.Query))
             return NotFound();
 
-        var result = await userService.SearchAsync(searchRequest.Query, searchRequest.Page, searchRequest.PageSize);
+        if (!PageCursor.TryParse(searchRequest.Cursor, out var cursor))
+            return this.InvalidCursor();
+
+        var result = await userService
+            .SearchAsync(searchRequest.Query, cursor, ClampPageSize(searchRequest.PageSize));
         
         if (result.IsError)
         {
@@ -81,11 +91,6 @@ public class SearchController(BoardService boardService, TagService tagService, 
             return result.ToProblem(this);
         }
         
-        return Ok(new PagedResponse<UserDto>(
-                result.Value.Data,
-                result.Value.Total,
-                result.Value.Page,
-                result.Value.PageSize)
-        );
+        return Ok(result.Value.ToResponse());
     }
 }

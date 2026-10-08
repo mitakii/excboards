@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using Domain.Dto;
 using Domain.Entities;
+using Domain.Enums;
 using Domain.Exceptions;
 using Domain.Interfaces;
 using Infrastructure.Persistence.Projections;
@@ -70,30 +71,15 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
             .FirstOrDefaultAsync();
     }
 
-    public async Task<PagedResult<BoardSummaryDto>> GetLatestPagedAsync(Guid? userId, int pageNumber, int pageSize)
+    public Task<CursorPage<BoardSummaryDto>> GetLatestPagedAsync(Guid? userId, TimeCursor? cursor, int pageSize)
     {
         var q = context.UserBoards
             .AsNoTracking()
             .Where(ub => ub.IsPublished ||
                          userId == ub.UserId ||
-                         ub.Collaborators.Any(c => c.UserId == userId))
-            .OrderByDescending(ub => ub.Created)
-            .ThenByDescending(ub => ub.Id);
+                         ub.Collaborators.Any(c => c.UserId == userId));
 
-        var total = await q.CountAsync();
-            
-        var data = await q.Skip((pageNumber - 1) * pageSize)
-            .Take(pageSize)
-            .Select(BoardProjections.Summary(userId))
-            .ToListAsync();
-
-        return new PagedResult<BoardSummaryDto>()
-        {
-            Data = data,
-            Page = pageNumber,
-            PageSize = pageSize,
-            Total = total,
-        };
+        return NewestCreatedFirstAsync(q, userId, cursor, pageSize);
     }
 
     public Task<List<UserBoard>> GetAllByUserIdAsync(Guid userId)
@@ -104,35 +90,19 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
             .ToListAsync();
     }
 
-    public async Task<PagedResult<BoardSummaryDto>> GetAllByUserIdPagedAsync(Guid requestedUserId, Guid? currentUserId, int pageNumber, int pageSize)
+    public Task<CursorPage<BoardSummaryDto>> GetAllByUserIdPagedAsync(Guid requestedUserId, Guid? currentUserId, TimeCursor? cursor, int pageSize)
     {
         var q = context.UserBoards
             .AsNoTracking()
             .Where(ub => ub.UserId == requestedUserId &&
                          (ub.IsPublished ||
                           currentUserId == ub.UserId ||
-                          ub.Collaborators.Any(c => c.UserId == currentUserId)))
-            .OrderByDescending(ub => ub.Created)
-            .ThenByDescending(ub => ub.Id);
-        
-        var count = await q.CountAsync();
-            
-        var data = await q
-            .Skip((pageNumber - 1) * pageSize)
-            .Take(pageSize)
-            .Select(BoardProjections.Summary(currentUserId))
-            .ToListAsync();
+                          ub.Collaborators.Any(c => c.UserId == currentUserId)));
 
-        return new PagedResult<BoardSummaryDto>()
-        {
-            Data = data,
-            Page = pageNumber,
-            PageSize = pageSize,
-            Total = count,
-        };
+        return NewestCreatedFirstAsync(q, currentUserId, cursor, pageSize);
     }
 
-    public async Task<PagedResult<BoardSummaryDto>> SearchAsync(Guid? currentUserId, string query, int page = 1, int pageSize = 10)
+    public Task<CursorPage<BoardSummaryDto>> SearchAsync(Guid? currentUserId, string query, TimeCursor? cursor, int pageSize)
     {
         var q = context.UserBoards
             .AsNoTracking()
@@ -141,52 +111,144 @@ public class BoardRepository(AppDbContext context) : IBoardRepository
                 EF.Functions.ILike(ub.Description, $"%{query}%")) &&
                          (ub.IsPublished || 
                           currentUserId == ub.UserId || 
-                          ub.Collaborators.Any(c => c.UserId == currentUserId)))
-            .OrderBy(ub => ub.Created)
-            .ThenBy(ub => ub.Id);
-        
-        var count = await q.CountAsync();
-        
-        var data = await q.Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(BoardProjections.Summary(currentUserId))
-            .ToListAsync();
+                          ub.Collaborators.Any(c => c.UserId == currentUserId)));
 
-        return new PagedResult<BoardSummaryDto>()
-        {
-            Data = data,
-            Page = page,
-            PageSize = pageSize,
-            Total = count,
-        };
+        return OldestCreatedFirstAsync(q, currentUserId, cursor, pageSize);
     }
 
-    public async Task<PagedResult<BoardSummaryDto>> SearchByTagsAsync(Guid? currentUserId, List<Guid> tagIds, int page = 1, int pageSize = 10)
+    public Task<CursorPage<BoardSummaryDto>> SearchByTagsAsync(Guid? currentUserId, List<Guid> tagIds, TimeCursor? cursor, int pageSize)
     {
-        
         var q = context.UserBoards
             .AsNoTracking()
             .Where(ub => ub.Tags.Count(t => tagIds.Contains(t.Id)) == tagIds.Count &&
                          (ub.IsPublished || 
                           currentUserId == ub.UserId || 
-                          ub.Collaborators.Any(c => c.UserId == currentUserId)))
-            .OrderBy(ub => ub.Created)
-            .ThenBy(ub => ub.Id);
+                          ub.Collaborators.Any(c => c.UserId == currentUserId)));
+
+        return OldestCreatedFirstAsync(q, currentUserId, cursor, pageSize);
+    }
+
+    public async Task<CursorPage<BoardSummaryDto>> GetContributedPagedAsync(Guid userId, Guid? viewerId, TimeCursor? cursor, int pageSize)
+    {
+        var q = context.UserBoards
+            .AsNoTracking()
+            .Where(ub => ub.UserId != userId &&
+                         ub.Collaborators.Any(c => c.UserId == userId && c.Permission != PermissionLevel.Viewer) &&
+                         (ub.IsPublished ||
+                          viewerId == ub.UserId ||
+                          ub.Collaborators.Any(c => c.UserId == viewerId)));
+
+        int? total = cursor is null ? await q.CountAsync() : null;
         
-        var count = await q.CountAsync();
-        
-        var data = await q.Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(BoardProjections.Summary(currentUserId))
+        if (cursor is { } c)
+            q = q.Where(ub => EF.Functions.LessThan(
+                ValueTuple.Create(ub.Updated, ub.Id), ValueTuple.Create(c.At, c.Id)));
+
+        var rows = await q
+            .OrderByDescending(ub => ub.Updated)
+            .ThenByDescending(ub => ub.Id)
+            .Take(pageSize + 1)
+            .Select(BoardProjections.Summary(viewerId))
             .ToListAsync();
 
-        return new PagedResult<BoardSummaryDto>()
+        return CursorPaging.Build(rows, pageSize, total, b => new TimeCursor(b.Updated, b.Id).ToString());
+    }
+
+    public async Task<CursorPage<BoardSummaryDto>> GetLikedPagedAsync(Guid userId, Guid? viewerId, TimeCursor? cursor, int pageSize)
+    {
+        var q = context.BoardLikes
+            .AsNoTracking()
+            .Where(l => l.UserId == userId &&
+                        (l.Board.IsPublished ||
+                         viewerId == l.Board.UserId ||
+                         l.Board.Collaborators.Any(c => c.UserId == viewerId)));
+
+        int? total = cursor is null ? await q.CountAsync() : null;
+
+        if (cursor is { } c)
+            q = q.Where(l => EF.Functions.LessThan(
+                ValueTuple.Create(l.CreatedAt, l.Id), ValueTuple.Create(c.At, c.Id)));
+        
+        var likes = await q
+            .OrderByDescending(l => l.CreatedAt)
+            .ThenByDescending(l => l.Id)
+            .Take(pageSize + 1)
+            .Select(l => new { l.Id, l.CreatedAt, l.BoardId })
+            .ToListAsync();
+
+        var boardIds = likes.Select(l => l.BoardId).ToList();
+        var summaries = await context.UserBoards
+            .AsNoTracking()
+            .Where(ub => boardIds.Contains(ub.Id))
+            .Select(BoardProjections.Summary(viewerId))
+            .ToDictionaryAsync(b => b.Id);
+
+        var page = CursorPaging.Build(likes, pageSize, total, l => new TimeCursor(l.CreatedAt, l.Id).ToString());
+        return new CursorPage<BoardSummaryDto>
         {
-            Data = data,
-            Page = page,
-            PageSize = pageSize,
-            Total = count,
+            Data = page.Data.Where(l => summaries.ContainsKey(l.BoardId)).Select(l => summaries[l.BoardId]).ToList(),
+            NextCursor = page.NextCursor,
+            Total = page.Total,
         };
+    }
+
+    private async Task<CursorPage<BoardSummaryDto>> NewestCreatedFirstAsync(
+        IQueryable<UserBoard> q, Guid? viewerId, TimeCursor? cursor, int pageSize)
+    {
+        int? total = cursor is null ? await q.CountAsync() : null;
+
+        if (cursor is { } c)
+            q = q.Where(ub => EF.Functions.LessThan(
+                ValueTuple.Create(ub.Created, ub.Id), ValueTuple.Create(c.At, c.Id)));
+
+        var rows = await q
+            .OrderByDescending(ub => ub.Created)
+            .ThenByDescending(ub => ub.Id)
+            .Take(pageSize + 1) // for later check if there is more items to load
+            .Select(BoardProjections.Summary(viewerId))
+            .ToListAsync();
+
+        return CursorPaging.Build(
+            rows, 
+            pageSize, 
+            total, 
+            b => new TimeCursor(b.Created, b.Id).ToString());
+    }
+
+    private async Task<CursorPage<BoardSummaryDto>> OldestCreatedFirstAsync(
+        IQueryable<UserBoard> q, Guid? viewerId, TimeCursor? cursor, int pageSize)
+    {
+        int? total = cursor is null ? await q.CountAsync() : null;
+
+        if (cursor is { } c)
+            q = q.Where(ub => EF.Functions.GreaterThan(
+                ValueTuple.Create(ub.Created, ub.Id), ValueTuple.Create(c.At, c.Id)));
+
+        var rows = await q
+            .OrderBy(ub => ub.Created)
+            .ThenBy(ub => ub.Id)
+            .Take(pageSize + 1) // for later check if there is more items to load
+            .Select(BoardProjections.Summary(viewerId))
+            .ToListAsync();
+
+        return CursorPaging.Build(rows, pageSize, total, b => new TimeCursor(b.Created, b.Id).ToString());
+    }
+
+    public Task<UserBoardStatsDto?> GetUserBoardStatsAsync(Guid userId)
+    {
+        return context.Users
+            .AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => new UserBoardStatsDto
+            {
+                PublicBoards = context.UserBoards.Count(b => b.UserId == userId && b.IsPublished),
+                LikesReceived = context.BoardLikes.Count(l => l.Board.UserId == userId && l.Board.IsPublished),
+                ContributedBoards = context.UserBoards.Count(b =>
+                    b.UserId != userId &&
+                    b.IsPublished &&
+                    b.Collaborators.Any(c => c.UserId == userId && c.Permission != PermissionLevel.Viewer)),
+            })
+            .FirstOrDefaultAsync();
     }
 
     public Task<bool> ExistsByNameAsync(Guid userId, string name)

@@ -40,7 +40,7 @@ public class BoardBookmarkRepository(AppDbContext context) : IBoardBookmarkRepos
             .ExecuteDeleteAsync();
     }
 
-    public async Task<PagedResult<BookmarkedBoardDto>> GetBookmarkedBoardsPagedAsync(Guid userId, int pageNumber, int pageSize)
+    public async Task<CursorPage<BookmarkedBoardDto>> GetBookmarkedBoardsPagedAsync(Guid userId, TimeCursor? cursor, int pageSize)
     {
         var query = context.BoardBookmarks
             .Where(bm => bm.UserId == userId
@@ -48,15 +48,19 @@ public class BoardBookmarkRepository(AppDbContext context) : IBoardBookmarkRepos
                              || bm.Board.UserId == userId
                              || bm.Board.Collaborators.Any(c => c.UserId == userId)));
 
-        var total = await query.CountAsync();
+        int? total = cursor is null ? await query.CountAsync() : null;
 
-        var items = await query
+        if (cursor is { } c)
+            query = query.Where(bm => EF.Functions.LessThan(
+                ValueTuple.Create(bm.CreatedAt, bm.Id), ValueTuple.Create(c.At, c.Id)));
+
+        // The bookmark's own Id is the tie-breaker, so carry it alongside the DTO.
+        var rows = await query
             .AsNoTracking()
             .OrderByDescending(bm => bm.CreatedAt)
             .ThenByDescending(bm => bm.Id)
-            .Skip((pageNumber - 1) * pageSize)
-            .Take(pageSize)
-            .Select(bm => new BookmarkedBoardDto()
+            .Take(pageSize + 1)
+            .Select(bm => new { bm.Id, Dto = new BookmarkedBoardDto()
             {
                 Name = bm.Board.Name,
                 Description = bm.Board.Description,
@@ -69,15 +73,16 @@ public class BoardBookmarkRepository(AppDbContext context) : IBoardBookmarkRepos
                 LikesCount = bm.Board.BoardLikes.Count,
                 IsLiked = bm.Board.BoardLikes.Any(l => l.UserId == userId),
                 Tags = bm.Board.Tags.Select(t => new TagDto { Id = t.Id, Name = t.Name }).ToList()
-            })
+            } })
             .ToListAsync();
 
-        return new PagedResult<BookmarkedBoardDto>()
+        var page = CursorPaging.Build(rows, pageSize, total,
+            r => new TimeCursor(r.Dto.BookmarkedAt, r.Id).ToString());
+        return new CursorPage<BookmarkedBoardDto>
         {
-            Data = items,
-            Total = total,
-            Page = pageNumber,
-            PageSize = pageSize
+            Data = page.Data.Select(r => r.Dto).ToList(),
+            NextCursor = page.NextCursor,
+            Total = page.Total,
         };
     }
 }

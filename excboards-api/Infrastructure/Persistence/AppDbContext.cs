@@ -33,7 +33,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
         builder.Entity<BoardLike>(l =>
         {
             l.HasIndex(x => new { x.UserId, x.BoardId }).IsUnique();
-            l.HasOne<UserBoard>()
+            l.HasOne(x => x.Board)
                 .WithMany(b => b.BoardLikes)
                 .HasForeignKey(x => x.BoardId);
         });

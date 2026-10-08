@@ -11,18 +11,23 @@ namespace Application.Boards;
 public class BoardThumbnailService(IFileRepository fileRepository,
     IThumbnailRepository thumbnailRepository,
     IPermissionService permissionService,
-    IBoardRepository boardRepository)
+    IBoardRepository boardRepository,
+    UploadLimitsOptions uploadLimits)
 {
     private const int MaxThumbnails = 5;
     public const int MaxBatchBoards = 50;
     private static readonly TimeSpan DownloadUrlExpiry = TimeSpan.FromMinutes(10);
 
     // add thumbnail to board -> send to user presigned upload url
-    public async Task<ErrorOr<BoardThumbnailDto>> AddBoardThumbnailAsync(Guid userId, Guid boardId)
+    public async Task<ErrorOr<BoardThumbnailDto>> AddBoardThumbnailAsync(Guid userId, Guid boardId, long size, string mimeType)
     {
         var permission = await permissionService.SafeCheckEditPermissionAsync(userId, boardId);
         if (permission.IsError)
             return permission.Errors;
+
+        var valid = UploadValidator.ValidateThumbnail(size, mimeType, uploadLimits);
+        if (valid.IsError)
+            return valid.Errors;
 
         BoardThumbnail boardThumbnail;
         try
@@ -36,7 +41,7 @@ public class BoardThumbnailService(IFileRepository fileRepository,
 
         var uploadUrl = await fileRepository
             .GetUploadUrlAsync(BoardFileKeys.Thumbnail(boardId, boardThumbnail.Id),
-            TimeSpan.FromMinutes(10));
+            TimeSpan.FromMinutes(5), mimeType, size);
 
         return new BoardThumbnailDto()
         {

@@ -9,7 +9,7 @@ public interface IUserService
 {
     public Task<ErrorOr<UserDto>> GetUserByIdAsync(Guid userId);
     public Task<ErrorOr<UserDto>> GetUserByNameAsync(string username);
-    public Task<ErrorOr<PagedResult<UserDto>>> SearchAsync(string query, int page, int pageSize);
+    public Task<ErrorOr<CursorPage<UserDto>>> SearchAsync(string query, PageCursor? cursor, int pageSize);
     
     public Task<ErrorOr<Updated>> UpdatePfpAsync(Guid userId, IFormFile picture, string password);
     public Task<ErrorOr<Updated>> ChangeUsername(Guid userId, string newUsername, string password);

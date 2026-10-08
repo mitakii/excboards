@@ -86,7 +86,7 @@ public class BoardCollaboratorService(
         return null;
     }
 
-    public async Task<ErrorOr<List<BoardCollaboratorDto>>> GetAllBoardCollaborators(Guid boardId, Guid userId)
+    public async Task<ErrorOr<List<BoardCollaboratorDto>>> GetAllBoardCollaborators(Guid boardId, Guid? userId)
     {
         var permission = await permissionService.CanViewAsync(userId, boardId);
         if(!permission)

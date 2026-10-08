@@ -4,6 +4,7 @@ using excboards_api.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Infrastructure.Persistence.Repositories;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace excboards_api.Controllers;
 
@@ -13,9 +14,11 @@ public class ThumbnailController(BoardThumbnailService thumbnailService) : Contr
 {
     [Authorize]
     [HttpPost("{boardId:guid}")]
-    public async Task<IActionResult> AddBoardThumbnailAsync(Guid boardId)
+    [EnableRateLimiting(RateLimitPolicies.UploadUrl)]
+    public async Task<IActionResult> AddBoardThumbnailAsync(Guid boardId, [FromBody] AddThumbnailRequest request)
     {
-        var result = await thumbnailService.AddBoardThumbnailAsync(User.GetUserId(), boardId);
+        var result = await thumbnailService
+            .AddBoardThumbnailAsync(User.GetUserId(), boardId, request.Size, request.MimeType);
         if (result.IsError)
             return result.ToProblem(this);
 

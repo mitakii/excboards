@@ -12,8 +12,11 @@ namespace Application.WorldBoards;
 public class WorldBoardService(
     IWorldBoardRepository wbRepository,
     IFileRepository fileRepository,
-    IPermissionService permissionService)
+    IPermissionService permissionService,
+    UploadLimitsOptions uploadLimits)
 {
+    private static readonly TimeSpan UploadUrlExpiry = TimeSpan.FromMinutes(5);
+
     private static readonly byte[] EmptySceneJson = Encoding.UTF8.GetBytes(
         """{"type":"excalidraw","version":2,"source":"excboards","elements":[],"appState":{},"files":{}}""");
 
@@ -160,7 +163,7 @@ public class WorldBoardService(
         return result.ToDictionary(k => k.FileId, v => v.FileUrl);
     }
 
-    public async Task<ErrorOr<string>> GetUploadPresignedUrl(Guid userId, Guid boardId, string fileId)
+    public async Task<ErrorOr<string>> GetUploadPresignedUrl(Guid userId, Guid boardId, string fileId, long size, string mimeType)
     {
         var board = await wbRepository.GetByIdAsync(boardId);
         if (board == null)
@@ -172,8 +175,13 @@ public class WorldBoardService(
         if (await permissionService.UserWorldBoardIsBannedAsync(userId))
             return Error.Forbidden("WorldBoard.Edit", "User is banned from WorldBoard");
 
+        var valid = await UploadValidator.ValidateBoardFileAsync(
+            fileRepository, uploadLimits, boardId, fileId, size, mimeType);
+        if (valid.IsError)
+            return valid.Errors;
+
         var result = await fileRepository
-            .GetUploadUrlAsync(BoardFileKeys.File(boardId, fileId), TimeSpan.FromMinutes(10));
+            .GetUploadUrlAsync(BoardFileKeys.File(boardId, fileId), UploadUrlExpiry, mimeType, size);
         return result;
     }
 }

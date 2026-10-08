@@ -13,6 +13,7 @@ public class OrphanedFileCleanupJob(
     AppDbContext db, 
     IFileRepository fileRepository, 
     IOptions<FileCleanupOptions> options, 
+    IOptions<UploadLimitsOptions> uploadLimits,
     ILogger<OrphanedFileCleanupJob> logger)
 {
     public async Task RunAsync(CancellationToken stoppingToken)
@@ -62,6 +63,17 @@ public class OrphanedFileCleanupJob(
             .Select(o => o.Key)
             .ToHashSet(StringComparer.Ordinal);
 
+        // Upload URLs sign Content-Length, so these shouldn't exist; this is the backstop
+        // in case a storage backend doesn't enforce signed headers.
+        var oversized = storedFiles
+            .Where(o => o.Size > uploadLimits.Value.MaxFileBytes)
+            .Select(o => o.Key)
+            .ToHashSet(StringComparer.Ordinal);
+        if (oversized.Count > 0)
+            logger.LogWarning("Deleting {OversizedCount} files over the size limit in {BoardId} board: {Keys}",
+                oversized.Count, boardId, oversized);
+
+        orphaned.UnionWith(oversized);
         if (orphaned.Count == 0)
             return 0;
 
