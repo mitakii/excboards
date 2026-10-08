@@ -4,6 +4,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { getErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { MAX_BOARD_THUMBNAILS } from "../api";
+import { UploadLimitError } from "../uploadLimits";
 import {
   useAddBoardThumbnail,
   useBoardThumbnails,
@@ -78,7 +79,7 @@ export function ThumbnailEditor({ boardId }: { boardId: string }) {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/png,image/jpeg,image/webp"
           className="hidden"
           onChange={handleFileSelected}
         />
@@ -86,7 +87,9 @@ export function ThumbnailEditor({ boardId }: { boardId: string }) {
 
       {addThumbnail.isError && (
         <p className="text-sm text-destructive">
-          {getErrorMessage(addThumbnail.error, "Failed to upload thumbnail.")}
+          {addThumbnail.error instanceof UploadLimitError
+            ? addThumbnail.error.message
+            : getErrorMessage(addThumbnail.error, "Failed to upload thumbnail.")}
         </p>
       )}
     </div>

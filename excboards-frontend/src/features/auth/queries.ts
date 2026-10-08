@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   useMutation,
   useQuery,
@@ -13,7 +14,11 @@ export const AUTH_STATUS_KEY = ["auth", "status"];
 function resetSessionState(queryClient: QueryClient) {
   clearRecentBoards();
   clearRecentUsers();
-  queryClient.removeQueries();
+  // Keep the auth query: removing it detaches components still watching it, and they
+  // only pick up a replacement on their next render. Everything else is per-user data.
+  queryClient.removeQueries({
+    predicate: (query) => query.queryKey[0] !== AUTH_STATUS_KEY[0],
+  });
 }
 
 export function useStatus() {
@@ -23,6 +28,26 @@ export function useStatus() {
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
+}
+
+/**
+ * Increments when the logged-in user changes (login, logout, switching accounts).
+ * Used as a key to remount the current page so its per-user data refetches.
+ * The first status check on page load doesn't count, so a normal load mounts once.
+ */
+export function useSessionGeneration() {
+  const { data: user, isPending } = useStatus();
+  const current = isPending ? null : (user?.userId ?? "anonymous");
+  const [session, setSession] = useState({ id: current, generation: 0 });
+
+  if (current !== null && current !== session.id) {
+    setSession({
+      id: current,
+      generation: session.id === null ? session.generation : session.generation + 1,
+    });
+  }
+
+  return session.generation;
 }
 
 export function useLogin() {
@@ -61,8 +86,8 @@ export function useLogout() {
   return useMutation({
     mutationFn: authApi.logout,
     onSuccess: () => {
-      resetSessionState(queryClient);
       queryClient.setQueryData(AUTH_STATUS_KEY, null);
+      resetSessionState(queryClient);
     },
   });
 }

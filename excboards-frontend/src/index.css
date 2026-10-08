@@ -237,3 +237,9 @@ body {
     scroll-behavior: auto !important;
   }
 }
+/* Excalidraw's unlayered `.excalidraw a { color: var(--link-color) }` beats every Tailwind
+   (layered) text color, turning link-buttons rendered inside the canvas UI blue.
+   revert-layer hands the color back to the utilities layer. */
+.excalidraw a[data-slot="button"] {
+  color: revert-layer;
+}

@@ -7,6 +7,7 @@ import { BoardFormDialog } from "@/features/boards/components/BoardFormDialog";
 import { BoardList } from "@/features/boards/components/BoardList";
 import type { BoardCardData } from "@/features/boards/components/BoardCard";
 import { useUserBoards, useDeleteBoard } from "@/features/boards/queries";
+import { useUserById } from "@/features/profile/queries";
 import type { AuthUser } from "@/features/auth/api";
 
 const PAGE_SIZE = 6;
@@ -15,13 +16,18 @@ export function YourBoardsSection({ user }: { user: AuthUser }) {
   const [page, setPage] = useState(1);
   const boards = useUserBoards(user.userId, page, PAGE_SIZE);
   const deleteBoard = useDeleteBoard();
+  // auth status has no profile picture, so look the user up like the other lists do
+  const profile = useUserById(user.userId);
 
   const items: BoardCardData[] = (boards.data?.result ?? []).map((board) => ({
     id: board.id,
     name: board.name,
     description: board.description ?? "",
     tags: board.tags.map((tag) => tag.name),
-    owner: { username: user.userName },
+    owner: {
+      username: profile.data?.username ?? user.userName,
+      pfpUrl: profile.data?.profilePictureUrl,
+    },
     updatedAt: new Date(board.updated).toLocaleDateString(),
     isPublished: board.isPublished,
     isBookmarked: board.isBookmarked,

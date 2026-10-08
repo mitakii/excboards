@@ -65,10 +65,13 @@ function WorldBoardCanvas({ board }: { board: WorldBoard }) {
       boardId={board.id}
       apiBase={WORLD_BOARD_API}
       sceneQueryKey={["worldBoards", board.id, "scene"]}
+      boardPath={`/world/${board.id}`}
       sceneData={scene.data}
       cannotEdit={viewOnly}
       realtimeEnabled={!board.isReadOnly}
       viewModeEnabled={viewOnly}
+      // A shared board: one "Open" would replace everyone's drawings.
+      allowOpenFile={false}
       renderTopRightUI={(isMobile) => (
         <div className="flex items-center gap-2">
           {!isMobile && (

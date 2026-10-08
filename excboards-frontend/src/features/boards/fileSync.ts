@@ -1,6 +1,12 @@
 import type { ExcalidrawImperativeAPI, BinaryFileData, DataURL } from "@excalidraw/excalidraw/types";
 import type { ExcalidrawElement, FileId } from "@excalidraw/excalidraw/element/types";
 import * as boardsApi from "./api";
+import {
+  BOARD_FILE_TYPES,
+  formatMB,
+  MAX_FILE_BYTES,
+  UploadLimitError,
+} from "./uploadLimits";
 
 function blobToDataURL(blob: Blob): Promise<DataURL> {
   return new Promise((resolve, reject) => {
@@ -29,8 +35,14 @@ export async function uploadBoardFile(
   file: BinaryFileData,
   base = boardsApi.BOARDS_API,
 ) {
-  const uploadUrl = await boardsApi.getUploadUrl(boardId, file.id, base);
+  if (!BOARD_FILE_TYPES.has(file.mimeType))
+    throw new UploadLimitError(`Images of type ${file.mimeType} can't be saved to the board.`);
   const blob = await dataURLToBlob(file.dataURL);
+  if (blob.size > MAX_FILE_BYTES)
+    throw new UploadLimitError(`Image is too large to save (max ${formatMB(MAX_FILE_BYTES)}).`);
+
+  // The URL is signed for exactly this Content-Type and size.
+  const uploadUrl = await boardsApi.getUploadUrl(boardId, file.id, blob.size, file.mimeType, base);
   const res = await fetch(uploadUrl, {
     method: "PUT",
     body: blob,

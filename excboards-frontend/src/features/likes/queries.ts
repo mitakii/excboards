@@ -37,6 +37,14 @@ export function useToggleLike() {
           }));
         },
         onError,
+        // drop unliked boards from profile Liked tabs and refresh likes-received stats
+        onSettled: () =>
+          queryClient.invalidateQueries({
+            predicate: (query) =>
+              query.queryKey[0] === "boards" &&
+              query.queryKey[1] === "u" &&
+              (query.queryKey[3] === "liked" || query.queryKey[3] === "stats"),
+          }),
       }),
     [queryClient]
   );

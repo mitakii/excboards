@@ -1,6 +1,12 @@
 import type { ExcalidrawInitialDataState } from "@excalidraw/excalidraw/types";
 import { isAxiosError } from "axios";
 import { api, type PagedEnvelope } from "@/lib/api";
+import {
+  formatMB,
+  MAX_THUMBNAIL_BYTES,
+  THUMBNAIL_TYPES,
+  UploadLimitError,
+} from "./uploadLimits";
 
 /** Board-like resources sharing the scene/file endpoint shape. */
 export type SceneApiBase = "/api/boards" | "/api/worldboard";
@@ -103,8 +109,15 @@ export interface BoardThumbnail {
 /** Mirrors backend Application.Boards.BoardThumbnailService.MaxThumbnails. */
 export const MAX_BOARD_THUMBNAILS = 5;
 
-export async function addBoardThumbnail(boardId: string) {
-  const res = await api.post<BoardThumbnail>(`/api/thumbnail/${boardId}`);
+export async function addBoardThumbnail(
+  boardId: string,
+  size: number,
+  mimeType: string
+) {
+  const res = await api.post<BoardThumbnail>(`/api/thumbnail/${boardId}`, {
+    size,
+    mimeType,
+  });
   return res.data;
 }
 
@@ -156,13 +169,22 @@ export function listBoardThumbnails(boardId: string) {
 }
 
 export async function uploadBoardThumbnail(boardId: string, file: File) {
-  const { uploadUrl } = await addBoardThumbnail(boardId);
+  if (!THUMBNAIL_TYPES.has(file.type))
+    throw new UploadLimitError("Thumbnail must be a PNG, JPEG or WebP image.");
+  if (file.size > MAX_THUMBNAIL_BYTES)
+    throw new UploadLimitError(
+      `Thumbnail is too large (max ${formatMB(MAX_THUMBNAIL_BYTES)}).`
+    );
+
+  const { uploadUrl } = await addBoardThumbnail(boardId, file.size, file.type);
   if (!uploadUrl) throw new Error("No upload URL returned for thumbnail.");
-  await fetch(uploadUrl, {
+  // The URL is signed for exactly this Content-Type and size.
+  const res = await fetch(uploadUrl, {
     method: "PUT",
     body: file,
     headers: { "Content-Type": file.type },
   });
+  if (!res.ok) throw new Error(`Thumbnail upload failed with ${res.status}`);
 }
 
 export async function deleteBoardThumbnail(boardId: string, position: number) {
@@ -172,9 +194,15 @@ export async function deleteBoardThumbnail(boardId: string, position: number) {
 export async function getUploadUrl(
   boardId: string,
   fileId: string,
+  size: number,
+  mimeType: string,
   base = BOARDS_API
 ) {
-  const res = await api.get<string>(`${base}/${boardId}/uploadUrl/${fileId}`);
+  const res = await api.post<string>(`${base}/${boardId}/uploadUrl`, {
+    fileId,
+    size,
+    mimeType,
+  });
   return res.data;
 }
 
@@ -227,6 +255,44 @@ export async function updateCollaborator(
 
 export async function removeCollaborator(boardId: string, userId: string) {
   await api.delete(`/api/boards/${boardId}/collaborators/${userId}`);
+}
+
+/** Mirrors backend Domain.Dto.UserBoardStatsDto; counts public boards only. */
+export interface UserBoardStats {
+  publicBoards: number;
+  likesReceived: number;
+  contributedBoards: number;
+}
+
+/** Boards owned by others where the user is an Editor/Admin collaborator. */
+export async function listUserContributedBoards(
+  userId: string,
+  page: number,
+  pageSize: number
+): Promise<PagedEnvelope<Board>> {
+  const res = await api.get<PagedEnvelope<Board>>(
+    `/api/boards/u/${userId}/contributed`,
+    { params: { page, pageSize } }
+  );
+  return res.data;
+}
+
+/** Boards the user liked, newest like first. */
+export async function listUserLikedBoards(
+  userId: string,
+  page: number,
+  pageSize: number
+): Promise<PagedEnvelope<Board>> {
+  const res = await api.get<PagedEnvelope<Board>>(
+    `/api/boards/u/${userId}/liked`,
+    { params: { page, pageSize } }
+  );
+  return res.data;
+}
+
+export async function getUserBoardStats(userId: string) {
+  const res = await api.get<UserBoardStats>(`/api/boards/u/${userId}/stats`);
+  return res.data;
 }
 
 /** Newest boards the caller can see: published, own, or shared with them. */

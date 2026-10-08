@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ClampText } from "@/components/ClampText";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -109,6 +109,12 @@ export function BoardCard({
               {board.owner && (
                 <>
                   <Avatar size="sm">
+                    {board.owner.pfpUrl && (
+                      <AvatarImage
+                        src={board.owner.pfpUrl}
+                        alt={board.owner.username}
+                      />
+                    )}
                     <AvatarFallback>
                       {board.owner.username.slice(0, 2).toUpperCase()}
                     </AvatarFallback>

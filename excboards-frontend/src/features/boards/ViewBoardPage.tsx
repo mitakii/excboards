@@ -23,7 +23,7 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
   const board = useBoard(boardId);
   const scene = useBoardScene(boardId);
   const collaborators = useBoardCollaborators(boardId);
-  const { data: user } = useStatus();
+  const { data: user, isLoading: statusLoading } = useStatus();
 
   const realtimeEnabled = (collaborators.data?.length ?? 0) > 0;
 
@@ -37,19 +37,18 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
   const myPermission = (collaborators.data ?? []).find(
     (c) => user && c.userId.toLowerCase() === user.userId.toLowerCase()
   )?.permission;
+  // Anonymous visitors and Viewer collaborators can't edit. A failed collaborator
+  // lookup leaves non-owners read-only too; the server enforces this either way.
   const cannotEdit =
-    Boolean(user) &&
-    board.isSuccess &&
-    collaborators.isSuccess &&
-    !isOwner &&
-    myPermission !== "Editor" &&
-    myPermission !== "Admin";
+    !user || (!isOwner && myPermission !== "Editor" && myPermission !== "Admin");
 
   useEffect(() => {
     if (board.data) addRecentBoard(board.data.id);
   }, [board.data]);
 
-  if (board.isLoading || scene.isLoading) {
+  // wait for login status and collaborators too, so the canvas opens in the right
+  // mode instead of flipping between editable and read-only
+  if (board.isLoading || scene.isLoading || collaborators.isLoading || statusLoading) {
     return (
       <div className="flex flex-1 items-center justify-center text-muted-foreground">
         <Spinner />
@@ -70,8 +69,10 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
       boardId={boardId}
       apiBase={BOARDS_API}
       sceneQueryKey={["boards", boardId, "scene"]}
+      boardPath={`/boards/${boardId}`}
       sceneData={scene.data}
       cannotEdit={cannotEdit}
+      viewModeEnabled={cannotEdit}
       realtimeEnabled={realtimeEnabled}
       renderTopRightUI={(isMobile) =>
         isMobile ? null : (

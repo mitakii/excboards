@@ -26,6 +26,7 @@ import { getErrorMessage } from "@/lib/api";
 import { useLogout, useStatus } from "@/features/auth/queries";
 import { BoardFormDialog } from "@/features/boards/components/BoardFormDialog";
 import { useUserById } from "@/features/profile/queries";
+import { Logo } from "./Logo";
 
 export function Navbar({
   showSidebarTrigger = true,
@@ -61,8 +62,9 @@ export function Navbar({
 
         <Link
           to="/"
-          className="shrink-0 text-base font-semibold text-foreground transition-opacity hover:opacity-70"
+          className="flex shrink-0 items-center gap-2 text-base font-semibold text-foreground transition-opacity hover:opacity-70"
         >
+          <Logo />
           excboards
         </Link>
 
@@ -161,6 +163,21 @@ export function Navbar({
             </>
           ) : (
             <>
+              {/* signed-in users toggle the theme from the account menu */}
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={handleToggleTheme}
+                aria-label={
+                  resolvedTheme === "dark"
+                    ? "Switch to light mode"
+                    : "Switch to dark mode"
+                }
+                title={resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                {resolvedTheme === "dark" ? <SunIcon /> : <MoonIcon />}
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"

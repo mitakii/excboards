@@ -21,9 +21,10 @@ function App() {
           <Route path="search" element={<SearchPage />} />
           <Route path="world" element={<WorldBoardPage />} />
           <Route path="world/:id" element={<WorldBoardPage />} />
+          {/* public: anonymous visitors get published boards read-only */}
+          <Route path="boards/:id" element={<ViewBoardPage />} />
 
           <Route element={<ProtectedRoute />}>
-            <Route path="boards/:id" element={<ViewBoardPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 

@@ -7,6 +7,7 @@ import {
   LockIcon,
   PencilIcon,
   UserMinusIcon,
+  Trash2Icon,
   UserPlusIcon,
   XIcon,
 } from "lucide-react";
@@ -41,6 +42,7 @@ import {
   usePublishBoard,
   useRemoveCollaborator,
   useUpdateBoard,
+  useDeleteBoard,
   useUpdateCollaborator,
 } from "../queries";
 import { AddCollaboratorsDialog } from "./AddCollaboratorsDialog";
@@ -73,7 +75,9 @@ export function BoardOverviewDialog({
       <DialogContent
         showCloseButton={false}
         className="max-h-[85vh] w-[640px] max-w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-[calc(100vw-2rem)]">
-        {isOpen && <BoardOverviewContent boardId={boardId} />}
+        {isOpen && (
+          <BoardOverviewContent boardId={boardId} onDeleted={() => setOpen(false)} />
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -95,7 +99,13 @@ function OverviewCloseButton() {
   );
 }
 
-function BoardOverviewContent({ boardId }: { boardId: string }) {
+function BoardOverviewContent({
+  boardId,
+  onDeleted,
+}: {
+  boardId: string;
+  onDeleted: () => void;
+}) {
   const board = useBoard(boardId);
   const { data: user } = useStatus();
   const owner = useUserById(board.data?.ownerId);
@@ -104,6 +114,7 @@ function BoardOverviewContent({ boardId }: { boardId: string }) {
   const publishBoard = usePublishBoard();
   const removeCollaborator = useRemoveCollaborator(boardId);
   const updateCollaborator = useUpdateCollaborator(boardId);
+  const deleteBoard = useDeleteBoard();
 
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
@@ -168,6 +179,16 @@ function BoardOverviewContent({ boardId }: { boardId: string }) {
       toast.error(getErrorMessage(err, "Failed to publish board."));
       throw err;
     }
+  }
+
+  async function handleDelete() {
+    try {
+      await deleteBoard.mutateAsync(boardId);
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Couldn't delete board."));
+      throw err;
+    }
+    onDeleted();
   }
 
   async function handleSave() {
@@ -278,6 +299,34 @@ function BoardOverviewContent({ boardId }: { boardId: string }) {
               <PencilIcon />
               <span className="sr-only">Edit board</span>
             </Button>
+          )}
+          {isOwner && (
+            <ConfirmDialog
+              size="sm"
+              icon={<Trash2Icon />}
+              title="Delete board?"
+              description={
+                <>
+                  <span className="font-medium text-foreground wrap-anywhere">
+                    {data.name}
+                  </span>{" "}
+                  and all its contents will be permanently deleted.
+                </>
+              }
+              confirmLabel="Delete"
+              onConfirm={handleDelete}
+              trigger={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled={deleteBoard.isPending}
+                  className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2Icon />
+                  <span className="sr-only">Delete board</span>
+                </Button>
+              }
+            />
           )}
           <OverviewCloseButton />
         </div>

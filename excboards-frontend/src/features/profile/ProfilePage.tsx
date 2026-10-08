@@ -1,25 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { PagePagination } from "@/components/PagePagination";
 import { Spinner } from "@/components/ui/spinner";
 import { getErrorMessage } from "@/lib/api";
 import { addRecentUser } from "@/lib/recentUsers";
-import { BoardList } from "@/features/boards/components/BoardList";
-import type { BoardCardData } from "@/features/boards/components/BoardCard";
-import { useUserBoards, useDeleteBoard } from "@/features/boards/queries";
 import { useStatus } from "@/features/auth/queries";
 import { useUserProfile } from "./queries";
+import { ProfileBoardTabs } from "./components/ProfileBoardTabs";
 import { ProfileInfoCard } from "./components/ProfileInfoCard";
-
-const PAGE_SIZE = 6;
 
 export function ProfilePage() {
   const { username } = useParams<{ username: string }>();
-  const [page, setPage] = useState(1);
   const { data: currentUser } = useStatus();
   const profile = useUserProfile(username);
-  const boards = useUserBoards(profile.data?.userId, page, PAGE_SIZE);
-  const deleteBoard = useDeleteBoard();
 
   const isOwnProfile = currentUser?.userId === profile.data?.userId;
 
@@ -45,38 +37,17 @@ export function ProfilePage() {
     );
   }
 
-  const items: BoardCardData[] = (boards.data?.result ?? []).map((board) => ({
-    id: board.id,
-    name: board.name,
-    description: board.description ?? "",
-    tags: board.tags.map((tag) => tag.name),
-    owner: { username: profile.data.username, pfpUrl: profile.data.profilePictureUrl },
-    updatedAt: new Date(board.updated).toLocaleDateString(),
-    isPublished: board.isPublished,
-    isBookmarked: board.isBookmarked,
-    likesCount: board.likesCount,
-    isLiked: board.isLiked,
-  }));
-
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
       <ProfileInfoCard profile={profile.data} isOwnProfile={isOwnProfile} />
 
-      <div className="min-w-0 space-y-4">
-        <h2 className="text-lg font-semibold text-foreground">Boards</h2>
-        <BoardList
-          boards={items}
-          emptyMessage="No boards yet."
-          onDelete={isOwnProfile ? (id) => deleteBoard.mutateAsync(id) : undefined}
+      <div className="min-w-0">
+        {/* keyed so paging resets when navigating between profiles (the route stays mounted) */}
+        <ProfileBoardTabs
+          key={profile.data.userId}
+          userId={profile.data.userId}
+          isOwnProfile={isOwnProfile}
         />
-        {(boards.data?.totalCount ?? 0) > PAGE_SIZE && (
-          <PagePagination
-            page={page}
-            onPageChange={setPage}
-            pageSize={PAGE_SIZE}
-            total={boards.data?.totalCount ?? 0}
-          />
-        )}
       </div>
     </div>
   );

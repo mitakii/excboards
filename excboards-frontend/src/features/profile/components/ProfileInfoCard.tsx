@@ -3,7 +3,12 @@ import { SettingsIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useUserBoardStats } from "@/features/boards/queries";
 import type { UserProfile } from "../api";
+
+function plural(count: number, one: string, many: string) {
+  return `${count} ${count === 1 ? one : many}`;
+}
 
 export function ProfileInfoCard({
   profile,
@@ -16,6 +21,7 @@ export function ProfileInfoCard({
     year: "numeric",
     month: "long",
   });
+  const stats = useUserBoardStats(profile.userId);
 
   return (
     <Card>
@@ -29,6 +35,15 @@ export function ProfileInfoCard({
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-lg font-semibold text-foreground">{profile.username}</h1>
           <p className="text-sm text-muted-foreground">Joined {joined}</p>
+          {stats.data && (
+            <p className="mt-1 text-xs text-muted-foreground tabular-nums">
+              {plural(stats.data.publicBoards, "public board", "public boards")}
+              {" · "}
+              {plural(stats.data.likesReceived, "like", "likes")}
+              {" · "}
+              contributed to {plural(stats.data.contributedBoards, "board", "boards")}
+            </p>
+          )}
         </div>
         {isOwnProfile && (
           <Button asChild variant="outline" size="sm" className="shrink-0">

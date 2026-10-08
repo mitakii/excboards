@@ -12,42 +12,20 @@ import { LatestBoardsSection } from "./LatestBoardsSection";
 import { RecentlyViewedSection } from "./RecentlyViewedSection";
 import { YourBoardsSection } from "./YourBoardsSection";
 
-const TABS = ["yours", "latest", "recent", "bookmarked"] as const;
-type HomeTab = (typeof TABS)[number];
-
-const STORAGE_KEY = "home.boardTab";
-
-function readStoredTab(): HomeTab {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return TABS.includes(stored as HomeTab) ? (stored as HomeTab) : "yours";
-  } catch {
-    return "yours";
-  }
-}
-
 export function HomeBoardTabs({ user }: { user: AuthUser }) {
-  const [tab, setTab] = useState<HomeTab>(readStoredTab);
-
-  const changeTab = (value: string) => {
-    setTab(value as HomeTab);
-    try {
-      localStorage.setItem(STORAGE_KEY, value);
-    } catch {
-      // storage unavailable (private mode etc.), tab just won't be remembered
-    }
-  };
+  // always opens on Latest; switching tabs isn't remembered across visits
+  const [tab, setTab] = useState("latest");
 
   return (
-    <Tabs value={tab} onValueChange={changeTab}>
+    <Tabs value={tab} onValueChange={setTab}>
       <TabsList aria-label="Boards">
-        <TabsTrigger value="yours">
-          <LayoutGridIcon />
-          Your boards
-        </TabsTrigger>
         <TabsTrigger value="latest">
           <SparklesIcon />
           Latest
+        </TabsTrigger>
+        <TabsTrigger value="yours">
+          <LayoutGridIcon />
+          Your boards
         </TabsTrigger>
         <TabsTrigger value="recent">
           <HistoryIcon />
@@ -58,11 +36,11 @@ export function HomeBoardTabs({ user }: { user: AuthUser }) {
           Bookmarked
         </TabsTrigger>
       </TabsList>
-      <TabsContent value="yours">
-        <YourBoardsSection user={user} />
-      </TabsContent>
       <TabsContent value="latest">
         <LatestBoardsSection />
+      </TabsContent>
+      <TabsContent value="yours">
+        <YourBoardsSection user={user} />
       </TabsContent>
       <TabsContent value="recent">
         <RecentlyViewedSection />

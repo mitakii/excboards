@@ -7,7 +7,7 @@ import type { BoardCardData } from "@/features/boards/components/BoardCard";
 import { useLatestBoards } from "@/features/boards/queries";
 import { useUsersByIds } from "@/features/profile/queries";
 
-const PAGE_SIZE = 9;
+const PAGE_SIZE = 12;
 
 export function LatestBoardsSection() {
   const [page, setPage] = useState(1);

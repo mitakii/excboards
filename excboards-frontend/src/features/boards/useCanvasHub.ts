@@ -71,6 +71,16 @@ export function useCanvasHub(
     });
 
     let cancelled = false;
+
+    // Automatic reconnect gets a new connection id, and group membership was
+    // tied to the old one — rejoin or we silently stop receiving updates.
+    connection.onreconnected(() => {
+      if (cancelled) return;
+      connection.invoke("JoinRoom", boardId).catch((err) => {
+        console.error("Failed to rejoin board room", err);
+      });
+    });
+
     const startPromise = connection
       .start()
       .then(() => {

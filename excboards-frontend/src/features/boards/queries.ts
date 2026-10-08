@@ -109,6 +109,40 @@ export function useUserBoards(
   });
 }
 
+export function useUserContributedBoards(
+  userId: string | undefined,
+  page: number,
+  pageSize: number
+) {
+  return useQuery({
+    queryKey: ["boards", "u", userId, "contributed", page, pageSize],
+    queryFn: () => boardsApi.listUserContributedBoards(userId!, page, pageSize),
+    enabled: !!userId,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useUserLikedBoards(
+  userId: string | undefined,
+  page: number,
+  pageSize: number
+) {
+  return useQuery({
+    queryKey: ["boards", "u", userId, "liked", page, pageSize],
+    queryFn: () => boardsApi.listUserLikedBoards(userId!, page, pageSize),
+    enabled: !!userId,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useUserBoardStats(userId: string | undefined) {
+  return useQuery({
+    queryKey: ["boards", "u", userId, "stats"],
+    queryFn: () => boardsApi.getUserBoardStats(userId!),
+    enabled: !!userId,
+  });
+}
+
 export function useLatestBoards(page: number, pageSize: number) {
   return useQuery({
     queryKey: ["boards", "latest", page, pageSize],
@@ -135,7 +169,13 @@ export function useDeleteBoard() {
     onSuccess: (_data, id) => {
       removeRecentBoard(id);
       queryClient.removeQueries({ queryKey: ["boards", id] });
-      queryClient.invalidateQueries({ queryKey: ["boards", "u"] });
+      // every list the board could be in: profile tabs + stats, latest, search, bookmarks
+      queryClient.invalidateQueries({
+        predicate: ({ queryKey: [root, scope] }) =>
+          (root === "boards" && (scope === "u" || scope === "latest")) ||
+          root === "search" ||
+          root === "bookmarks",
+      });
     },
   });
 }
