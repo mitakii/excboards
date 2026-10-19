@@ -1,4 +1,5 @@
 using Application.Interfaces;
+using Domain.Entities;
 using Domain.Enums;
 using ErrorOr;
 using Infrastructure.Persistence;
@@ -74,6 +75,28 @@ public class PermissionService(AppDbContext context) : IPermissionService
     }
     
     
+    public async Task<BoardAccess?> LoadBoardAccessAsync(Guid boardId)
+    {
+        var row = await context.UserBoards
+            .AsNoTracking()
+            .Where(b => b.Id == boardId)
+            .Select(b => new
+            {
+                b.UserId,
+                b.IsPublished,
+                Collaborators = b.Collaborators.Select(c => new { c.UserId, c.Permission }).ToList(),
+            })
+            .FirstOrDefaultAsync();
+
+        return row is null
+            ? null
+            : new BoardAccess(row.UserId, row.IsPublished,
+                row.Collaborators.ToDictionary(c => c.UserId, c => c.Permission));
+    }
+
+    public Task<WorldBoard?> LoadWorldBoardAsync(Guid boardId)
+        => context.WorldBoards.AsNoTracking().FirstOrDefaultAsync(b => b.Id == boardId);
+
     private async Task<AccessResult?> GetAccessAsync(Guid userId, Guid boardId)
     {
         var result = await context.UserBoards

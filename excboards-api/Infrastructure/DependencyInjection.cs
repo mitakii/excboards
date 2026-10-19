@@ -21,17 +21,19 @@ using Infrastructure.Storage.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebSockets;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using StackExchange.Redis;
 
 namespace Infrastructure;
 
 public static class InfrastructureServiceCollectionExtensions
 {
     public static IHostApplicationBuilder AddInfrastructure(this IHostApplicationBuilder builder) =>
-        builder.AddPersistence().AddStorage().AddIdentityAndAuth().AddBoardServices();
+        builder.AddPersistence().AddStorage().AddIdentityAndAuth().AddBoardServices().AddRedis();
 
     public static IHostApplicationBuilder AddBackgroundWorkers(this IHostApplicationBuilder builder)
     {
@@ -46,6 +48,39 @@ public static class InfrastructureServiceCollectionExtensions
         builder.Services.AddScoped<RefreshTokenCleanupJob>();
         builder.Services.AddScoped<DeletedBoardsCleanupJob>();
         
+        return builder;
+    }
+
+    public static IHostApplicationBuilder AddRedis(this IHostApplicationBuilder builder)
+    {
+        var redisConnectionString = builder.Configuration["Redis"];
+
+        if (!string.IsNullOrWhiteSpace(redisConnectionString))
+        {
+            var redisConfig = ConfigurationOptions.Parse(redisConnectionString);
+            redisConfig.ChannelPrefix = RedisChannel.Literal("excboards:");
+            
+            var mux = ConnectionMultiplexer.Connect(redisConfig);
+            builder.Services.AddSingleton<IConnectionMultiplexer>(mux);
+            builder.Services.AddStackExchangeRedisCache(options =>
+                {
+                    options.ConnectionMultiplexerFactory = 
+                        () => Task.FromResult<IConnectionMultiplexer>(mux);
+                    options.InstanceName = "excboards:";
+                }
+            );
+        }
+
+        // for cached permission service
+        builder.Services.AddHybridCache(options =>
+            {
+                options.DefaultEntryOptions = new HybridCacheEntryOptions()
+                {
+                    Expiration = TimeSpan.FromMinutes(5),
+                    LocalCacheExpiration = TimeSpan.FromSeconds(10),
+                };
+            }
+        );
         return builder;
     }
     
@@ -79,7 +114,6 @@ public static class InfrastructureServiceCollectionExtensions
     {
         builder.Services.Configure<S3Options>(builder.Configuration.GetSection("S3"));
         builder.Services.Configure<UploadLimitsOptions>(builder.Configuration.GetSection("UploadLimits"));
-        // Application services take the plain value (Application has no Options dependency).
         builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<UploadLimitsOptions>>().Value);
         builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 
@@ -106,7 +140,6 @@ public static class InfrastructureServiceCollectionExtensions
     
     public static IHostApplicationBuilder AddBoardServices(this IHostApplicationBuilder builder)
     {
-        builder.Services.AddScoped<IPermissionService, PermissionService>();
         builder.Services.AddScoped<ITagRepository, TagRepository>();
         builder.Services.AddScoped<TagService>();
         builder.Services.AddScoped<BoardService>();
@@ -116,6 +149,15 @@ public static class InfrastructureServiceCollectionExtensions
         builder.Services.AddScoped<WorldBoardService>();
         builder.Services.AddScoped<BookmarkService>();
         builder.Services.AddScoped<LikeService>();
+
+        // only needed for CachedPermissionService as internal
+        builder.Services.AddScoped<PermissionService>();
+        
+        builder.Services.AddScoped<CachedPermissionService>();
+        builder.Services.AddScoped<IPermissionService>(
+            sp => sp.GetRequiredService<CachedPermissionService>());
+        builder.Services.AddScoped<IBoardAccessCache>(
+            sp => sp.GetRequiredService<CachedPermissionService>());
 
         return builder;
     }

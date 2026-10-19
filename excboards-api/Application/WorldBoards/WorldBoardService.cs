@@ -13,6 +13,7 @@ public class WorldBoardService(
     IWorldBoardRepository wbRepository,
     IFileRepository fileRepository,
     IPermissionService permissionService,
+    IBoardAccessCache accessCache,
     UploadLimitsOptions uploadLimits)
 {
     private static readonly TimeSpan UploadUrlExpiry = TimeSpan.FromMinutes(5);
@@ -47,6 +48,7 @@ public class WorldBoardService(
         if (board == null)
             return Error.NotFound($"Board with id {id} not found.");
         await wbRepository.DeleteAsync(board);
+        await accessCache.InvalidateBoardAsync(board.Id);
         return board.Id;
     }
 
@@ -91,6 +93,7 @@ public class WorldBoardService(
 
         latest.IsReadOnly = true;
         await wbRepository.UpdateAsync(latest);
+        await accessCache.InvalidateBoardAsync(latest.Id);
     }
 
     public async Task<ErrorOr<WorldBoardDto>> GetByIdAsync(Guid id)

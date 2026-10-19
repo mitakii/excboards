@@ -13,6 +13,7 @@ namespace Application.Boards;
 public class BoardService(IBoardRepository boardRepository, 
     IFileRepository fileRepository,
     IPermissionService permissionService,
+    IBoardAccessCache accessCache,
     ITagRepository tagRepository,
     UploadLimitsOptions uploadLimits)
 {
@@ -149,8 +150,9 @@ public class BoardService(IBoardRepository boardRepository,
             return permission.Errors;
 
         board.IsPublished = true;
-        
+
         await boardRepository.UpdateAsync(board);
+        await accessCache.InvalidateBoardAsync(boardId);
         return Result.Updated;
     }
     
@@ -205,6 +207,7 @@ public class BoardService(IBoardRepository boardRepository,
             return Error.Forbidden("Board.Forbidden", "You do not have permission to delete this board.");
 
         await boardRepository.RemoveAsync(board);
+        await accessCache.InvalidateBoardAsync(boardId);
 
         return Result.Deleted;
     }

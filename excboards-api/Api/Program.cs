@@ -6,14 +6,16 @@ using Hangfire;
 using Hangfire.PostgreSql;
 using Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.SignalR.StackExchangeRedis;
 using Microsoft.IdentityModel.Tokens;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
-builder.AddInfrastructure(); // DbContext + Identity + ITokenService 
+builder.AddInfrastructure(); // DbContext + Identity + ITokenService + Redis
 
 var jwtSection = builder.Configuration.GetSection("JwtOptions");
 var jwtIssuer = jwtSection["Issuer"] ?? throw new InvalidOperationException("JwtOptions:Issuer is missing");
@@ -62,7 +64,16 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 builder.Services.AddExcboardsRateLimiting();
 
-builder.Services.AddSignalR();
+var signalR = builder.Services.AddSignalR();
+// Backplane reuses the multiplexer AddRedis() registered (only when Redis is configured)
+if (builder.Services.Any(d => d.ServiceType == typeof(IConnectionMultiplexer)))
+{
+    signalR.AddStackExchangeRedis();
+    builder.Services.AddOptions<RedisOptions>()
+        .Configure<IConnectionMultiplexer>((options, mux) =>
+            options.ConnectionFactory = _ => Task.FromResult(mux));
+}
+
 builder.Services.AddHangfire(config => 
     config.UsePostgreSqlStorage(
         builder.Configuration.GetConnectionString("DefaultConnection")));

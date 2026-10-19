@@ -1,5 +1,7 @@
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
+using RedisRateLimiting;
+using StackExchange.Redis;
 
 namespace excboards_api.Extensions;
 
@@ -25,23 +27,35 @@ public static class RateLimitingExtensions
             };
             
             options.AddPolicy(RateLimitPolicies.SceneSave, context =>
-                PerUserFixedWindow(context, permitLimit: 60));
+                PerUserFixedWindow(context, permitLimit: 60, RateLimitPolicies.SceneSave));
             options.AddPolicy(RateLimitPolicies.UploadUrl, context =>
-                PerUserFixedWindow(context, permitLimit: 30));
+                PerUserFixedWindow(context, permitLimit: 30,  RateLimitPolicies.UploadUrl));
         });
         return services;
     }
 
-    private static RateLimitPartition<string> PerUserFixedWindow(HttpContext context, int permitLimit)
+    private static RateLimitPartition<string> PerUserFixedWindow(HttpContext context, int permitLimit, string policy)
     {
-        var key = context.User.TryGetUserId()?.ToString()
-                  ?? context.Connection.RemoteIpAddress?.ToString()
-                  ?? "anonymous";
-        return RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
+        var key = $"{policy}:{context.User.TryGetUserId()?.ToString()               
+                          ?? context.Connection.RemoteIpAddress?.ToString() 
+                          ?? "anonymous"}";
+
+        var mux = context.RequestServices.GetService<IConnectionMultiplexer>();
+        if (mux is null)
         {
+            return RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = permitLimit,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            });
+        }
+
+        return RedisRateLimitPartition.GetFixedWindowRateLimiter(key, _ => new RedisFixedWindowRateLimiterOptions()
+        {
+            ConnectionMultiplexerFactory = () => mux,
             PermitLimit = permitLimit,
             Window = TimeSpan.FromMinutes(1),
-            QueueLimit = 0,
         });
     }
 }

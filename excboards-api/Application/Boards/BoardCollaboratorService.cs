@@ -11,6 +11,7 @@ public class BoardCollaboratorService(
     IBoardRepository boardRepository,
     IBoardCollaboratorRepository collaboratorRepository,
     IPermissionService permissionService,
+    IBoardAccessCache accessCache,
     IUserService userService)
 {
     public async Task<ErrorOr<Updated>> AddAsync
@@ -40,6 +41,7 @@ public class BoardCollaboratorService(
             Permission = permission,
             CreatedAt = DateTime.UtcNow,
         });
+        await accessCache.InvalidateBoardAsync(boardId);
 
         return Result.Updated;
     }
@@ -57,6 +59,7 @@ public class BoardCollaboratorService(
 
         collaborator.Permission = permission;
         await collaboratorRepository.UpdateAsync(collaborator);
+        await accessCache.InvalidateBoardAsync(boardId);
         return Result.Updated;
     }
 
@@ -71,6 +74,7 @@ public class BoardCollaboratorService(
             return Error.NotFound("Collaborator.NotFound", "Collaborator not found");
 
         await collaboratorRepository.RemoveAsync(collaborator);
+        await accessCache.InvalidateBoardAsync(boardId);
         return Result.Deleted;
     }
     
