@@ -31,6 +31,9 @@ interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
 }
 
+// A 401 from these means bad credentials, not an expired session, so refreshing won't help
+const NO_REFRESH_URLS = ["/refresh", "/api/auth/login", "/api/auth/google"];
+
 let isRefreshing = false;
 let failedQueue: QueueItem[] = [];
 
@@ -65,7 +68,7 @@ api.interceptors.response.use(
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url?.includes("/refresh")
+      !NO_REFRESH_URLS.some((url) => originalRequest.url?.includes(url))
     ) {
       originalRequest._retry = true;
 

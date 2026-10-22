@@ -37,13 +37,14 @@ export function useStatus() {
  */
 export function useSessionGeneration() {
   const { data: user, isPending } = useStatus();
-  const current = isPending ? null : (user?.userId ?? "anonymous");
+  const current = isPending ? null : user?.userId ?? "anonymous";
   const [session, setSession] = useState({ id: current, generation: 0 });
 
   if (current !== null && current !== session.id) {
     setSession({
       id: current,
-      generation: session.id === null ? session.generation : session.generation + 1,
+      generation:
+        session.id === null ? session.generation : session.generation + 1,
     });
   }
 
@@ -60,6 +61,35 @@ export function useLogin() {
       username: string;
       password: string;
     }) => authApi.login(username, password),
+    onSuccess: () => {
+      resetSessionState(queryClient);
+      queryClient.invalidateQueries({ queryKey: AUTH_STATUS_KEY });
+    },
+  });
+}
+
+export function useGoogleLogin() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (idToken: string) => authApi.loginWithGoogle(idToken),
+    onSuccess: (data) => {
+      if (data.needsUsername) return;
+      resetSessionState(queryClient);
+      queryClient.invalidateQueries({ queryKey: AUTH_STATUS_KEY });
+    },
+  });
+}
+
+export function useGoogleRegister() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      idToken,
+      username,
+    }: {
+      idToken: string;
+      username: string;
+    }) => authApi.registerWithGoogle(idToken, username),
     onSuccess: () => {
       resetSessionState(queryClient);
       queryClient.invalidateQueries({ queryKey: AUTH_STATUS_KEY });

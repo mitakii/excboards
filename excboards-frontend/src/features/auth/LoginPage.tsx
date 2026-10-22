@@ -4,10 +4,12 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldSeparator } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { getErrorMessage } from "@/lib/api";
 import { useLogin } from "./queries";
+import { GoogleSignInButton } from "./components/GoogleSignInButton";
+import { googleClientId } from "./google";
 import { loginSchema, type LoginFormValues } from "./schemas";
 
 export function LoginPage() {
@@ -42,6 +44,13 @@ export function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
             <FieldGroup>
+              {googleClientId && (
+                <>
+                  <GoogleSignInButton text="signin_with" />
+                  <FieldSeparator>or</FieldSeparator>
+                </>
+              )}
+
               <Field>
                 <FieldLabel htmlFor="username">Username</FieldLabel>
                 <Input id="username" autoComplete="username" {...register("username")} />

@@ -3,6 +3,7 @@ import { Layout } from "@/components/layout/Layout";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { RegisterPage } from "@/features/auth/RegisterPage";
+import { GoogleSignupPage } from "@/features/auth/GoogleSignupPage";
 import { HomePage } from "@/features/home/HomePage";
 import { SearchPage } from "@/features/search/SearchPage";
 import { ProfilePage } from "@/features/profile/ProfilePage";
@@ -18,6 +19,7 @@ function App() {
           <Route index element={<HomePage />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<RegisterPage />} />
+          <Route path="signup/google" element={<GoogleSignupPage />} />
           <Route path="search" element={<SearchPage />} />
           <Route path="world" element={<WorldBoardPage />} />
           <Route path="world/:id" element={<WorldBoardPage />} />

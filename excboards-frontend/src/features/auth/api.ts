@@ -7,18 +7,11 @@ export interface AuthUser {
   email: string;
 }
 
-/**
- * The signed-in user, or null when not logged in. Not being logged in is a normal
- * result, not an error: an errored query with no data refetches (and goes back to
- * "pending") every time another useStatus() mounts, which made pages flash their
- * loading state and unmount open dialogs for anonymous visitors.
- */
 export async function fetchStatus(): Promise<AuthUser | null> {
   try {
     const res = await api.get<AuthUser>("/api/auth/status");
     return res.data;
   } catch (err) {
-    // 401 from /status, or from /refresh when the interceptor's retry also fails
     if (
       isAxiosError(err) &&
       (err.response?.status === 401 || err.config?.url?.includes("/refresh"))
@@ -30,6 +23,22 @@ export async function fetchStatus(): Promise<AuthUser | null> {
 
 export async function login(username: string, password: string) {
   await api.post("/api/auth/login", { username, password });
+}
+
+/** Mirrors backend Contracts.Auth.GoogleLoginResponse. */
+export type GoogleLoginResponse =
+  | { needsUsername: false; user: AuthUser }
+  | { needsUsername: true; suggestedUsername: string };
+
+export async function loginWithGoogle(idToken: string) {
+  const res = await api.post<GoogleLoginResponse>("/api/auth/google", {
+    idToken,
+  });
+  return res.data;
+}
+
+export async function registerWithGoogle(idToken: string, username: string) {
+  await api.post("/api/auth/google/register", { idToken, username });
 }
 
 export async function register(

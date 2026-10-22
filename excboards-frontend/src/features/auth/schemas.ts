@@ -17,3 +17,7 @@ export const registerSchema = z.object({
 });
 
 export type RegisterFormValues = z.infer<typeof registerSchema>;
+
+export const googleSignupSchema = registerSchema.pick({ username: true });
+
+export type GoogleSignupFormValues = z.infer<typeof googleSignupSchema>;

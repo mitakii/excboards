@@ -2,12 +2,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldSeparator } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { getErrorMessage, getFieldErrors } from "@/lib/api";
 import { useRegister } from "./queries";
+import { GoogleSignInButton } from "./components/GoogleSignInButton";
+import { googleClientId } from "./google";
 import { registerSchema, type RegisterFormValues } from "./schemas";
 
 function matchField(key: string): "username" | "email" | "password" | null {
@@ -57,6 +59,13 @@ export function RegisterPage() {
         </CardHeader>
         <CardContent>
           <FieldGroup>
+            {googleClientId && (
+              <>
+                <GoogleSignInButton text="signup_with" />
+                <FieldSeparator>or</FieldSeparator>
+              </>
+            )}
+
             <form onSubmit={handleSubmit(onSubmit)} noValidate>
               <Field>
                 <FieldLabel htmlFor="username">Username</FieldLabel>
