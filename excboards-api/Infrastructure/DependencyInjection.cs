@@ -44,7 +44,8 @@ public static class InfrastructureServiceCollectionExtensions
         builder.Services.Configure<RefreshTokenCleanupOptions>(
             builder.Configuration.GetSection("RefreshTokenCleanupOptions"));
 
-        builder.Services.AddScoped<OrphanedFileCleanupJob>();
+        builder.Services.AddScoped<OrphanedUserBoardFileCleanupJob>();
+        builder.Services.AddScoped<OrphanedWorldBoardFileCleanupJob>();
         builder.Services.AddScoped<RefreshTokenCleanupJob>();
         builder.Services.AddScoped<DeletedBoardsCleanupJob>();
         
@@ -70,17 +71,7 @@ public static class InfrastructureServiceCollectionExtensions
                 }
             );
         }
-
-        // for cached permission service
-        builder.Services.AddHybridCache(options =>
-            {
-                options.DefaultEntryOptions = new HybridCacheEntryOptions()
-                {
-                    Expiration = TimeSpan.FromMinutes(5),
-                    LocalCacheExpiration = TimeSpan.FromSeconds(10),
-                };
-            }
-        );
+        
         return builder;
     }
     
@@ -152,6 +143,16 @@ public static class InfrastructureServiceCollectionExtensions
 
         // only needed for CachedPermissionService as internal
         builder.Services.AddScoped<PermissionService>();
+        
+        builder.Services.AddHybridCache(options =>
+            {
+                options.DefaultEntryOptions = new HybridCacheEntryOptions()
+                {
+                    Expiration = TimeSpan.FromMinutes(5),
+                    LocalCacheExpiration = TimeSpan.FromSeconds(10),
+                };
+            }
+        );
         
         builder.Services.AddScoped<CachedPermissionService>();
         builder.Services.AddScoped<IPermissionService>(

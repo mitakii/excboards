@@ -24,8 +24,13 @@ var boardCleanup = host.Services.GetRequiredService<IOptions<BoardDeletionOption
 var refreshTokenOptions = host.Services.GetRequiredService<IOptions<RefreshTokenCleanupOptions>>().Value;
 
 var recurringJobs = host.Services.GetRequiredService<IRecurringJobManager>();
-recurringJobs.AddOrUpdate<OrphanedFileCleanupJob>(
-    "orphaned-file-cleanup",
+recurringJobs.AddOrUpdate<OrphanedUserBoardFileCleanupJob>(
+    "orphaned-userBoards-file-cleanup",
+    j => j.RunAsync(CancellationToken.None),
+    HourlyCron(fileCleanup.IntervalHours));
+
+recurringJobs.AddOrUpdate<OrphanedWorldBoardFileCleanupJob>(
+    "orphaned-worldBoards-file-cleanup",
     j => j.RunAsync(CancellationToken.None),
     HourlyCron(fileCleanup.IntervalHours));
 

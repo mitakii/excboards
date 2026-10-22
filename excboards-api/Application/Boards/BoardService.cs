@@ -28,11 +28,15 @@ public class BoardService(IBoardRepository boardRepository,
         if (await boardRepository.ExistsByNameAsync(userId, name))
             return Error.Conflict("Board.DuplicateName", $"You already have a board named \"{name}\".");
 
+        var normalizedTags = NormalizeTags(tags);
+        if (normalizedTags.IsError)
+            return normalizedTags.Errors;
+
         var now = DateTime.UtcNow;
 
         List<Tag> boardTags = new();
-        if(tags is not null && tags.Count > 0)
-            boardTags = await tagRepository.CreateTagsAsync(tags);
+        if(normalizedTags.Value.Count > 0)
+            boardTags = await tagRepository.CreateTagsAsync(normalizedTags.Value);
 
         var board = new UserBoard
         {
@@ -59,6 +63,21 @@ public class BoardService(IBoardRepository boardRepository,
         }
 
         return board.Id;
+    }
+
+    // tag search splits the query on whitespace, so a tag must be a single word (join words with - or _)
+    private static ErrorOr<List<string>> NormalizeTags(List<string>? tags)
+    {
+        var normalized = (tags ?? [])
+            .Select(t => t.Trim())
+            .Where(t => t.Length > 0)
+            .ToList();
+
+        var invalid = normalized.FirstOrDefault(t => t.Any(char.IsWhiteSpace));
+        if (invalid is not null)
+            return Error.Validation("Board.Tags", $"Tag \"{invalid}\" must be a single word. Use - or _ to join words.");
+
+        return normalized;
     }
 
     public async Task<ErrorOr<CursorPage<BoardSummaryDto>>> SearchAsync(Guid? userId, string query, TimeCursor? cursor, int pageSize)
@@ -178,8 +197,12 @@ public class BoardService(IBoardRepository boardRepository,
             board.NormalizedName = newName.ToLower();
         }
 
-        if (dto.Tags.Count > 0)
-            board.Tags = await tagRepository.CreateTagsAsync(dto.Tags);
+        var normalizedTags = NormalizeTags(dto.Tags);
+        if (normalizedTags.IsError)
+            return normalizedTags.Errors;
+
+        if (normalizedTags.Value.Count > 0)
+            board.Tags = await tagRepository.CreateTagsAsync(normalizedTags.Value);
 
         try
         {

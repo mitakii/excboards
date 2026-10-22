@@ -1,4 +1,5 @@
 using System.Net;
+using Amazon.RuntimeDependencies;
 using Amazon.S3;
 using Application.Interfaces;
 using Application.Storage;
@@ -9,12 +10,12 @@ using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Storage;
 
-public class OrphanedFileCleanupJob(
+public class OrphanedUserBoardFileCleanupJob(
     AppDbContext db, 
     IFileRepository fileRepository, 
     IOptions<FileCleanupOptions> options, 
     IOptions<UploadLimitsOptions> uploadLimits,
-    ILogger<OrphanedFileCleanupJob> logger)
+    ILogger<OrphanedUserBoardFileCleanupJob> logger)
 {
     public async Task RunAsync(CancellationToken stoppingToken)
     {
@@ -30,7 +31,7 @@ public class OrphanedFileCleanupJob(
             }
             catch (Exception e)
             {
-                logger.LogWarning(e, "Orphaned file cleanup job failed for {BoardId}", boardId);
+                logger.LogWarning(e, "Orphaned file cleanup job failed for user board {BoardId}", boardId);
             }
         }
         

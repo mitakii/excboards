@@ -45,7 +45,7 @@ public class WorldBoardRepository(AppDbContext context) : IWorldBoardRepository
 
     public async Task AddAsync(WorldBoard worldBoard)
     {
-        await context.AddAsync(worldBoard);
+        await context.WorldBoards.AddAsync(worldBoard);
         await context.SaveChangesAsync();
     }
 
