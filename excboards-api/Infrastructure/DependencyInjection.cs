@@ -98,6 +98,7 @@ public static class InfrastructureServiceCollectionExtensions
         builder.Services.AddScoped<IAuthService, AuthService>();
         
         builder.Services.AddScoped<IUserRepository, UserRepository>();
+        builder.Services.Configure<GoogleAuthOptions>(builder.Configuration.GetSection("GoogleAuth"));
         return builder;
     } 
     

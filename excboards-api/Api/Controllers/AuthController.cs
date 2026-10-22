@@ -46,7 +46,7 @@ public class AuthController(
 
         return Created();
     }
-
+    
     [AllowAnonymous]
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginRequest request)
@@ -57,6 +57,31 @@ public class AuthController(
         var login = result.Value;
         Response.SetAuthCookies(login.Tokens.AccessToken, login.Tokens.RefreshToken, _jwtOptions);
         return Ok(new LoginResponse( login.UserId, login.UserName, login.Email));
+    }
+
+    [AllowAnonymous]
+    [HttpPost("google")]
+    public async Task<IActionResult> GoogleLogin(GoogleLoginRequest request)
+    {
+        var result = await authService.LoginWithGoogleAsync(request.IdToken);
+        if(result.IsError) return result.ToProblem(this);
+
+        if (result.Value.Login is not { } login)
+            return Ok(new GoogleLoginResponse(true, result.Value.Suggested));
+
+        Response.SetAuthCookies(login.Tokens.AccessToken, login.Tokens.RefreshToken, _jwtOptions);
+        return Ok(new GoogleLoginResponse(false, User: new LoginResponse(login.UserId, login.UserName, login.Email)));
+    }
+
+    [AllowAnonymous]
+    [HttpPost("google/register")]
+    public async Task<IActionResult> GoogleRegister(GoogleRegisterRequest request)
+    {
+        var result = await authService.RegisterWithGoogleAsync(request.IdToken, request.Username);
+        if (result.IsError) return result.ToProblem(this);
+        var register = result.Value;
+        Response.SetAuthCookies(register.Tokens.AccessToken, register.Tokens.RefreshToken, _jwtOptions);
+        return Ok(new LoginResponse(register.UserId, register.UserName, register.Email));
     }
 
     [AllowAnonymous]
