@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { PagePagination } from "@/components/PagePagination";
+import { LoadMore } from "@/components/LoadMore";
 import { Spinner } from "@/components/ui/spinner";
 import { getErrorMessage } from "@/lib/api";
+import { flattenCursorPages } from "@/lib/cursorPaging";
 import { BoardList } from "@/features/boards/components/BoardList";
 import type { BoardCardData } from "@/features/boards/components/BoardCard";
 import { useLatestBoards } from "@/features/boards/queries";
@@ -10,9 +10,8 @@ import { useUsersByIds } from "@/features/profile/queries";
 const PAGE_SIZE = 12;
 
 export function LatestBoardsSection() {
-  const [page, setPage] = useState(1);
-  const boards = useLatestBoards(page, PAGE_SIZE);
-  const latest = boards.data?.result ?? [];
+  const boards = useLatestBoards(PAGE_SIZE);
+  const { items: latest, total } = flattenCursorPages(boards.data, (board) => board.id);
   const owners = useUsersByIds(latest.map((board) => board.ownerId));
 
   const items: BoardCardData[] = latest.map((board) => {
@@ -46,14 +45,14 @@ export function LatestBoardsSection() {
       ) : (
         <BoardList boards={items} emptyMessage="No boards yet." />
       )}
-      {(boards.data?.totalCount ?? 0) > PAGE_SIZE && (
-        <PagePagination
-          page={page}
-          onPageChange={setPage}
-          pageSize={PAGE_SIZE}
-          total={boards.data?.totalCount ?? 0}
-        />
-      )}
+      <LoadMore
+        shown={items.length}
+        total={total}
+        hasMore={!!boards.hasNextPage}
+        loading={boards.isFetchingNextPage}
+        onLoadMore={() => boards.fetchNextPage()}
+        pagesLoaded={boards.data?.pages.length}
+      />
     </section>
   );
 }

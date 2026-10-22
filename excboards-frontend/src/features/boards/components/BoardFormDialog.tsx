@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { getErrorMessage } from "@/lib/api";
 import { addRecentBoard } from "@/lib/recentBoards";
 import { useCreateBoard, useUpdateBoard } from "../queries";
-import { TagBadgeEditor } from "./TagBadgeEditor";
+import { isValidTag, TagBadgeEditor } from "./TagBadgeEditor";
 
 const EMPTY_SCENE = JSON.stringify({
   type: "excalidraw",
@@ -44,6 +44,7 @@ export function BoardFormDialog({ trigger, board }: BoardFormDialogProps) {
   const [description, setDescription] = useState(board?.description ?? "");
   const [tags, setTags] = useState<string[]>(board?.tags ?? []);
   const [error, setError] = useState<string | null>(null);
+  const tagsValid = tags.every(isValidTag);
 
   useEffect(() => {
     if (!open) return;
@@ -54,7 +55,7 @@ export function BoardFormDialog({ trigger, board }: BoardFormDialogProps) {
   }, [open]);
 
   async function handleSubmit() {
-    if (!name.trim()) return;
+    if (!name.trim() || !tagsValid) return;
 
     setError(null);
     try {
@@ -127,7 +128,7 @@ export function BoardFormDialog({ trigger, board }: BoardFormDialogProps) {
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
         <DialogFooter>
-          <Button onClick={handleSubmit} disabled={!name.trim() || pending}>
+          <Button onClick={handleSubmit} disabled={!name.trim() || !tagsValid || pending}>
             {pending && <Spinner />}
             {isEdit ? "Save changes" : "Create board"}
           </Button>

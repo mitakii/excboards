@@ -1,6 +1,6 @@
 import type { ExcalidrawInitialDataState } from "@excalidraw/excalidraw/types";
 import { isAxiosError } from "axios";
-import { api, type PagedEnvelope } from "@/lib/api";
+import { api, emptyCursorEnvelope, type CursorEnvelope } from "@/lib/api";
 import {
   formatMB,
   MAX_THUMBNAIL_BYTES,
@@ -267,12 +267,12 @@ export interface UserBoardStats {
 /** Boards owned by others where the user is an Editor/Admin collaborator. */
 export async function listUserContributedBoards(
   userId: string,
-  page: number,
+  cursor: string | undefined,
   pageSize: number
-): Promise<PagedEnvelope<Board>> {
-  const res = await api.get<PagedEnvelope<Board>>(
+): Promise<CursorEnvelope<Board>> {
+  const res = await api.get<CursorEnvelope<Board>>(
     `/api/boards/u/${userId}/contributed`,
-    { params: { page, pageSize } }
+    { params: { cursor, pageSize } }
   );
   return res.data;
 }
@@ -280,12 +280,12 @@ export async function listUserContributedBoards(
 /** Boards the user liked, newest like first. */
 export async function listUserLikedBoards(
   userId: string,
-  page: number,
+  cursor: string | undefined,
   pageSize: number
-): Promise<PagedEnvelope<Board>> {
-  const res = await api.get<PagedEnvelope<Board>>(
+): Promise<CursorEnvelope<Board>> {
+  const res = await api.get<CursorEnvelope<Board>>(
     `/api/boards/u/${userId}/liked`,
-    { params: { page, pageSize } }
+    { params: { cursor, pageSize } }
   );
   return res.data;
 }
@@ -297,28 +297,28 @@ export async function getUserBoardStats(userId: string) {
 
 /** Newest boards the caller can see: published, own, or shared with them. */
 export async function listLatestBoards(
-  page: number,
+  cursor: string | undefined,
   pageSize: number
-): Promise<PagedEnvelope<Board>> {
-  const res = await api.get<PagedEnvelope<Board>>("/api/boards/latest", {
-    params: { page, pageSize },
+): Promise<CursorEnvelope<Board>> {
+  const res = await api.get<CursorEnvelope<Board>>("/api/boards/latest", {
+    params: { cursor, pageSize },
   });
   return res.data;
 }
 
 export async function listUserBoards(
   userId: string,
-  page: number,
+  cursor: string | undefined,
   pageSize: number
-): Promise<PagedEnvelope<Board>> {
+): Promise<CursorEnvelope<Board>> {
   try {
-    const res = await api.get<PagedEnvelope<Board>>(`/api/boards/u/${userId}`, {
-      params: { page, pageSize },
+    const res = await api.get<CursorEnvelope<Board>>(`/api/boards/u/${userId}`, {
+      params: { cursor, pageSize },
     });
     return res.data;
   } catch (err) {
     if (isAxiosError(err) && err.response?.status === 404) {
-      return { result: [], totalCount: 0, currentPage: page, pageSize };
+      return emptyCursorEnvelope();
     }
     throw err;
   }

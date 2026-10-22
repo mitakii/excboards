@@ -2,6 +2,19 @@ import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 
 /** Mirrors backend Contracts.PagedResponse<T> (camel-cased) — the
  * paged-list envelope shared by search and other paginated board endpoints. */
+/** Mirrors backend Contracts.CursorResponse (keyset "load more" lists). */
+export interface CursorEnvelope<T> {
+  result: T[];
+  /** Pass back to load the next page; null when there are no more items. */
+  nextCursor: string | null;
+  /** Only sent with the first page. */
+  totalCount: number | null;
+}
+
+export function emptyCursorEnvelope<T>(): CursorEnvelope<T> {
+  return { result: [], nextCursor: null, totalCount: 0 };
+}
+
 export interface PagedEnvelope<T> {
   result: T[];
   totalCount: number;

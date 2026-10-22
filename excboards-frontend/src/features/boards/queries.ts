@@ -1,11 +1,12 @@
 import { useEffect, useSyncExternalStore } from "react";
 import {
-  keepPreviousData,
+  useInfiniteQuery,
   useMutation,
   useQueries,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { cursorPageParams } from "@/lib/cursorPaging";
 import {
   getRecentBoardIds,
   removeRecentBoard,
@@ -97,41 +98,32 @@ export function useSaveScene() {
   });
 }
 
-export function useUserBoards(
-  userId: string | undefined,
-  page: number,
-  pageSize: number
-) {
-  return useQuery({
-    queryKey: ["boards", "u", userId, page, pageSize],
-    queryFn: () => boardsApi.listUserBoards(userId!, page, pageSize),
+export function useUserBoards(userId: string | undefined, pageSize: number) {
+  return useInfiniteQuery({
+    queryKey: ["boards", "u", userId, "owned", pageSize],
+    queryFn: ({ pageParam }) => boardsApi.listUserBoards(userId!, pageParam, pageSize),
+    ...cursorPageParams,
     enabled: !!userId,
   });
 }
 
-export function useUserContributedBoards(
-  userId: string | undefined,
-  page: number,
-  pageSize: number
-) {
-  return useQuery({
-    queryKey: ["boards", "u", userId, "contributed", page, pageSize],
-    queryFn: () => boardsApi.listUserContributedBoards(userId!, page, pageSize),
+export function useUserContributedBoards(userId: string | undefined, pageSize: number) {
+  return useInfiniteQuery({
+    queryKey: ["boards", "u", userId, "contributed", pageSize],
+    queryFn: ({ pageParam }) =>
+      boardsApi.listUserContributedBoards(userId!, pageParam, pageSize),
+    ...cursorPageParams,
     enabled: !!userId,
-    placeholderData: keepPreviousData,
   });
 }
 
-export function useUserLikedBoards(
-  userId: string | undefined,
-  page: number,
-  pageSize: number
-) {
-  return useQuery({
-    queryKey: ["boards", "u", userId, "liked", page, pageSize],
-    queryFn: () => boardsApi.listUserLikedBoards(userId!, page, pageSize),
+export function useUserLikedBoards(userId: string | undefined, pageSize: number) {
+  return useInfiniteQuery({
+    queryKey: ["boards", "u", userId, "liked", pageSize],
+    queryFn: ({ pageParam }) =>
+      boardsApi.listUserLikedBoards(userId!, pageParam, pageSize),
+    ...cursorPageParams,
     enabled: !!userId,
-    placeholderData: keepPreviousData,
   });
 }
 
@@ -143,11 +135,11 @@ export function useUserBoardStats(userId: string | undefined) {
   });
 }
 
-export function useLatestBoards(page: number, pageSize: number) {
-  return useQuery({
-    queryKey: ["boards", "latest", page, pageSize],
-    queryFn: () => boardsApi.listLatestBoards(page, pageSize),
-    placeholderData: keepPreviousData,
+export function useLatestBoards(pageSize: number) {
+  return useInfiniteQuery({
+    queryKey: ["boards", "latest", pageSize],
+    queryFn: ({ pageParam }) => boardsApi.listLatestBoards(pageParam, pageSize),
+    ...cursorPageParams,
   });
 }
 

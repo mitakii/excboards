@@ -10,6 +10,7 @@ import { useUserBoards } from "@/features/boards/queries";
 import { useBookmarkedBoards } from "@/features/bookmarks/queries";
 import { SidebarBoardTile } from "@/features/boards/components/SidebarBoardTile";
 import { RecentUsersList } from "@/features/profile/components/RecentUsersList";
+import { flattenCursorPages } from "@/lib/cursorPaging";
 
 function EmptyHint({ children }: { children: React.ReactNode }) {
   return (
@@ -19,9 +20,15 @@ function EmptyHint({ children }: { children: React.ReactNode }) {
 
 export function GeneralSidebarContent() {
   const { data: user } = useStatus();
-  const myBoards = useUserBoards(user?.userId, 1, 20);
-  const bookmarks = useBookmarkedBoards(1, 20, !!user);
-  const bookmarkedBoards = bookmarks.data?.result ?? [];
+  // Sidebar previews: only the first page is ever loaded.
+  const myBoards = flattenCursorPages(
+    useUserBoards(user?.userId, 20).data,
+    (board) => board.id
+  ).items;
+  const bookmarkedBoards = flattenCursorPages(
+    useBookmarkedBoards(20, !!user).data,
+    (board) => board.boardId
+  ).items;
 
   return (
     <>
@@ -63,11 +70,11 @@ export function GeneralSidebarContent() {
         <SidebarGroup>
           <SidebarGroupLabel>Your boards</SidebarGroupLabel>
           <SidebarGroupContent>
-            {(myBoards.data?.result ?? []).length === 0 ? (
+            {myBoards.length === 0 ? (
               <EmptyHint>You haven't created any boards yet.</EmptyHint>
             ) : (
               <SidebarMenu className="gap-1">
-                {(myBoards.data?.result ?? []).map((board) => (
+                {myBoards.map((board) => (
                   <SidebarBoardTile
                     key={board.id}
                     id={board.id}

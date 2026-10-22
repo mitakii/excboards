@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { PagePagination } from "@/components/PagePagination";
+import { LoadMore } from "@/components/LoadMore";
 import { Spinner } from "@/components/ui/spinner";
 import { getErrorMessage } from "@/lib/api";
 import { SEARCH_MODE_LABEL } from "./parseQuery";
-import { useSearch } from "./queries";
-import type { UserSearchResult } from "./api";
+import { useInfiniteSearch } from "./queries";
+import type { BoardSearchResult, UserSearchResult } from "./api";
 import { BoardResults } from "./components/BoardResults";
 import { HomeSearch } from "./components/HomeSearch";
 import { UserResultCard } from "./components/ResultCards";
@@ -15,22 +14,31 @@ const PAGE_SIZE = 12;
 export function SearchPage() {
   const [searchParams] = useSearchParams();
   const raw = searchParams.get("q") ?? "";
-  const [page, setPage] = useState(1);
+  // A new query is a new cache key, so it starts again from the first page.
+  const {
+    parsed,
+    enabled,
+    data,
+    isLoading,
+    isError,
+    error,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useInfiniteSearch(raw, PAGE_SIZE);
 
-  useEffect(() => {
-    setPage(1);
-  }, [raw]);
-
-  const { parsed, enabled, data, isLoading, isError, error } = useSearch(
-    raw,
-    page,
-    PAGE_SIZE
-  );
-
-  const results = data?.envelope.result ?? [];
-  const totalCount = data?.envelope.totalCount ?? 0;
-  const boardResults =
-    data && data.mode !== "user" ? data.envelope.result : [];
+  const mode = data?.pages[0]?.mode;
+  const seen = new Set<string>();
+  const results = (data?.pages ?? [])
+    .flatMap((page) => page.envelope.result as (UserSearchResult | BoardSearchResult)[])
+    .filter((item) => {
+      const key = "userId" in item ? item.userId : item.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  const totalCount = Math.max(data?.pages[0]?.envelope.totalCount ?? 0, results.length);
+  const boardResults = mode !== "user" ? (results as BoardSearchResult[]) : [];
   const modeLabel = SEARCH_MODE_LABEL[parsed.mode];
   const heading =
     parsed.mode === "tag"
@@ -72,22 +80,26 @@ export function SearchPage() {
             ? `No boards carry all of ${heading}.`
             : `No ${modeLabel.toLowerCase()} found for “${parsed.term}”.`}
         </p>
-      ) : data?.mode === "user" ? (
+      ) : mode === "user" ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {(results as UserSearchResult[]).map((user) => (
-            <UserResultCard key={user.userId} user={user} />
+          {(results as UserSearchResult[]).map((user, index) => (
+            <div key={user.userId} data-list-index={index} className="grid">
+              <UserResultCard user={user} />
+            </div>
           ))}
         </div>
       ) : (
         <BoardResults boards={boardResults} />
       )}
 
-      {enabled && totalCount > PAGE_SIZE && (
-        <PagePagination
-          page={page}
-          onPageChange={setPage}
-          pageSize={PAGE_SIZE}
+      {enabled && !isLoading && !isError && (
+        <LoadMore
+          shown={results.length}
           total={totalCount}
+          hasMore={!!hasNextPage}
+          loading={isFetchingNextPage}
+          onLoadMore={() => fetchNextPage()}
+          pagesLoaded={data?.pages.length}
         />
       )}
     </div>

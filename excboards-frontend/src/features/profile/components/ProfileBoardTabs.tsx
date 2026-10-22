@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   BookmarkIcon,
@@ -7,9 +6,8 @@ import {
   UsersIcon,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PagedBoardList } from "@/features/boards/components/PagedBoardList";
+import { LoadMoreBoardList } from "@/features/boards/components/LoadMoreBoardList";
 import {
-  useDeleteBoard,
   useUserBoards,
   useUserContributedBoards,
   useUserLikedBoards,
@@ -20,48 +18,24 @@ const PAGE_SIZE = 9;
 const TABS = ["boards", "contributed", "liked", "bookmarks"] as const;
 type ProfileTab = (typeof TABS)[number];
 
-function OwnedBoardsTab({ userId, isOwnProfile }: { userId: string; isOwnProfile: boolean }) {
-  const [page, setPage] = useState(1);
-  const boards = useUserBoards(userId, page, PAGE_SIZE);
-  const deleteBoard = useDeleteBoard();
-  return (
-    <PagedBoardList
-      query={boards}
-      page={page}
-      onPageChange={setPage}
-      pageSize={PAGE_SIZE}
-      emptyMessage="No boards yet."
-      onDelete={isOwnProfile ? (id) => deleteBoard.mutateAsync(id) : undefined}
-    />
-  );
+function OwnedBoardsTab({ userId }: { userId: string }) {
+  const boards = useUserBoards(userId, PAGE_SIZE);
+  return <LoadMoreBoardList query={boards} emptyMessage="No boards yet." />;
 }
 
 function ContributedBoardsTab({ userId }: { userId: string }) {
-  const [page, setPage] = useState(1);
-  const boards = useUserContributedBoards(userId, page, PAGE_SIZE);
+  const boards = useUserContributedBoards(userId, PAGE_SIZE);
   return (
-    <PagedBoardList
+    <LoadMoreBoardList
       query={boards}
-      page={page}
-      onPageChange={setPage}
-      pageSize={PAGE_SIZE}
       emptyMessage="Hasn't contributed to any boards yet."
     />
   );
 }
 
 function LikedBoardsTab({ userId }: { userId: string }) {
-  const [page, setPage] = useState(1);
-  const boards = useUserLikedBoards(userId, page, PAGE_SIZE);
-  return (
-    <PagedBoardList
-      query={boards}
-      page={page}
-      onPageChange={setPage}
-      pageSize={PAGE_SIZE}
-      emptyMessage="No liked boards yet."
-    />
-  );
+  const boards = useUserLikedBoards(userId, PAGE_SIZE);
+  return <LoadMoreBoardList query={boards} emptyMessage="No liked boards yet." />;
 }
 
 export function ProfileBoardTabs({
@@ -112,7 +86,7 @@ export function ProfileBoardTabs({
         )}
       </TabsList>
       <TabsContent value="boards">
-        <OwnedBoardsTab userId={userId} isOwnProfile={isOwnProfile} />
+        <OwnedBoardsTab userId={userId} />
       </TabsContent>
       <TabsContent value="contributed">
         <ContributedBoardsTab userId={userId} />

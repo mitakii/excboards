@@ -26,13 +26,22 @@ export function updateCachedBoard<T extends object>(
 
   const update = (data: unknown): unknown => {
     if (matches(data)) return patch(data);
-    if (
-      typeof data === "object" &&
-      data !== null &&
-      "result" in data &&
-      Array.isArray(data.result) &&
-      data.result.some(matches)
-    ) {
+    if (typeof data !== "object" || data === null) return data;
+
+    // "Load more" lists (useInfiniteQuery): { pages: [envelope, ...], pageParams }
+    if ("pages" in data && Array.isArray(data.pages)) {
+      const pages = data.pages.map(update);
+      return pages.some((page, i) => page !== (data.pages as unknown[])[i])
+        ? { ...data, pages }
+        : data;
+    }
+
+    // A list envelope ({ result: [...] }), possibly wrapped like search's { mode, envelope }.
+    if ("envelope" in data) {
+      const envelope = update(data.envelope);
+      return envelope === data.envelope ? data : { ...data, envelope };
+    }
+    if ("result" in data && Array.isArray(data.result) && data.result.some(matches)) {
       return {
         ...data,
         result: data.result.map((item) => (matches(item) ? patch(item) : item)),

@@ -46,7 +46,10 @@ export function HomeBoardTabs({ user }: { user: AuthUser }) {
         <RecentlyViewedSection />
       </TabsContent>
       <TabsContent value="bookmarked">
-        <BookmarkedBoardsSection />
+        <BookmarkedBoardsSection
+          maxPages={3}
+          viewAll={{ to: `/${user.userName}?tab=bookmarks`, label: "View all bookmarks" }}
+        />
       </TabsContent>
     </Tabs>
   );

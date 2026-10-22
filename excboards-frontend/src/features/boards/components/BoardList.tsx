@@ -2,17 +2,19 @@ import { useColumnCount } from "@/hooks/use-column-count";
 import { staggerDelay } from "@/lib/utils";
 import { BoardCard, type BoardCardData } from "./BoardCard";
 
+// Cards already on screen don't re-animate (keys are stable); new batches animate in
+// as a group, so cap the stagger instead of delaying card 40 by 40 steps.
+const STAGGER_BATCH = 12;
+
 const ENTRANCE_CLASS =
   "animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-backwards duration-300";
 
 export function BoardList({
   boards,
   emptyMessage,
-  onDelete,
 }: {
   boards: BoardCardData[];
   emptyMessage: string;
-  onDelete?: (id: string) => void | Promise<unknown>;
 }) {
   const columnCount = useColumnCount();
 
@@ -35,10 +37,12 @@ export function BoardList({
           {column.map(({ board, index }) => (
             <div
               key={board.id}
+              data-list-index={index}
               className={ENTRANCE_CLASS}
-              style={staggerDelay(index)}
+              // stagger only within the newly loaded batch, not from the top of the list
+              style={staggerDelay(index % STAGGER_BATCH)}
             >
-              <BoardCard board={board} onDelete={onDelete} />
+              <BoardCard board={board} />
             </div>
           ))}
         </div>

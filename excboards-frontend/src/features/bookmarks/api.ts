@@ -1,4 +1,4 @@
-import { api, type PagedEnvelope } from "@/lib/api";
+import { api, type CursorEnvelope } from "@/lib/api";
 import type { BoardTag } from "@/features/boards/api";
 
 /** Mirrors backend Domain.Dto.BookmarkedBoardDto. */
@@ -20,11 +20,11 @@ export interface BookmarkedBoard {
 
 /** Newest bookmark first; boards the user can no longer see are left out. */
 export async function listBookmarkedBoards(
-  page: number,
+  cursor: string | undefined,
   pageSize: number
-): Promise<PagedEnvelope<BookmarkedBoard>> {
-  const res = await api.get<PagedEnvelope<BookmarkedBoard>>("/api/bookmarks", {
-    params: { page, pageSize },
+): Promise<CursorEnvelope<BookmarkedBoard>> {
+  const res = await api.get<CursorEnvelope<BookmarkedBoard>>("/api/bookmarks", {
+    params: { cursor, pageSize },
   });
   return res.data;
 }

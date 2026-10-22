@@ -44,6 +44,7 @@ import {
 import { useSaveScene } from "../queries";
 import { formatMB, MAX_SCENE_BYTES, UploadLimitError } from "../uploadLimits";
 import { useCanvasHub } from "../useCanvasHub";
+import { ElementTweens } from "../elementTweens";
 import {
   appStateFromView,
   buildElementLink,
@@ -206,6 +207,18 @@ export function BoardCanvas({
 
   const knownFileIdsRef = useRef(new Set<string>());
 
+  // Animates remote drags/resizes between broadcasts instead of jumping.
+  const tweensRef = useRef<ElementTweens | null>(null);
+  tweensRef.current ??= new ElementTweens(
+    () => excalidrawApiRef.current?.getSceneElementsIncludingDeleted() ?? null,
+    (elements) =>
+      excalidrawApiRef.current?.updateScene({
+        elements,
+        captureUpdate: CaptureUpdateAction.NEVER,
+      })
+  );
+  useEffect(() => () => tweensRef.current?.dispose(), []);
+
   // Let a later scene update retry files that never became available.
   const forgetFailedFileIds = useCallback((failedIds: string[]) => {
     for (const id of failedIds) knownFileIdsRef.current.delete(id);
@@ -304,7 +317,11 @@ export function BoardCanvas({
         elementVersionsRef.current.set(el.id, el.version);
 
       excalidrawApi.updateScene({
-        elements: reconciled,
+        elements: tweensRef.current!.track(
+          localElements,
+          reconciled as unknown as OrderedExcalidrawElement[],
+          remoteElements
+        ),
         captureUpdate: CaptureUpdateAction.NEVER,
       });
 
@@ -409,7 +426,12 @@ export function BoardCanvas({
     appState: AppState,
     files: BinaryFiles
   ) {
-    latestSceneRef.current = { elements, appState, files };
+    // Mid-tween frames aren't real states; save where remote elements are headed.
+    latestSceneRef.current = {
+      elements: tweensRef.current!.withTargets(elements),
+      appState,
+      files,
+    };
 
     // Before isLoading clears, Excalidraw's own init would overwrite the scroll/zoom.
     if (!appState.isLoading && excalidrawApiRef.current) {

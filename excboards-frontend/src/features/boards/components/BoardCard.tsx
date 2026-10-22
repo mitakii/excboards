@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { GlobeIcon, LockIcon, Trash2Icon } from "lucide-react";
-import { toast } from "sonner";
+import { GlobeIcon, LockIcon } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -10,12 +9,9 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { ClampText } from "@/components/ClampText";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { BookmarkButton } from "@/features/bookmarks/components/BookmarkButton";
 import { LikeButton } from "@/features/likes/components/LikeButton";
-import { getErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useBoardThumbnails } from "../queries";
 import { BoardOverviewDialog } from "./BoardOverviewDialog";
@@ -46,13 +42,8 @@ function VisibilityIcon({ isPublished }: { isPublished: boolean }) {
   );
 }
 
-export function BoardCard({
-  board,
-  onDelete,
-}: {
-  board: BoardCardData;
-  onDelete?: (id: string) => void | Promise<unknown>;
-}) {
+/** Deleting happens from the overview dialog (owner only), not on the card. */
+export function BoardCard({ board }: { board: BoardCardData }) {
   const [overviewOpen, setOverviewOpen] = useState(false);
   const { data: thumbnails } = useBoardThumbnails(board.id);
   const hasThumbnail = (thumbnails?.length ?? 0) > 0;
@@ -141,39 +132,6 @@ export function BoardCard({
           </div>
         </CardContent>
       </Card>
-      {onDelete && (
-        <ConfirmDialog
-          size="sm"
-          icon={<Trash2Icon />}
-          title="Delete board?"
-          description={
-            <>
-              <span className="font-medium text-foreground wrap-anywhere">
-                {board.name}
-              </span>{" "}
-              and all its contents will be permanently deleted.
-            </>
-          }
-          confirmLabel="Delete"
-          onConfirm={async () => {
-            try {
-              await onDelete(board.id);
-            } catch (err) {
-              toast.error(getErrorMessage(err, "Couldn't delete board."));
-              throw err;
-            }
-          }}
-          trigger={
-            <Button
-              size="sm"
-              variant="destructive"
-              className="absolute top-2 right-2 z-10 bg-background/90 shadow-sm backdrop-blur-sm hover:bg-background"
-            >
-              Delete
-            </Button>
-          }
-        />
-      )}
       {overviewDialog}
     </div>
   );

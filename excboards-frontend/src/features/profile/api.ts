@@ -1,5 +1,5 @@
 import { isAxiosError } from "axios";
-import { api } from "@/lib/api";
+import { api, emptyCursorEnvelope, type CursorEnvelope } from "@/lib/api";
 
 export interface UserProfile {
   userId: string;
@@ -25,24 +25,18 @@ export interface UserSearchResult {
   profilePictureUrl: string;
 }
 
-interface SearchResponse<T> {
-  result: T[];
-  totalCount: number;
-  currentPage: number;
-  pageSize: number;
-}
-
-export async function searchUsers(query: string, page = 1, pageSize = 10) {
+/** First page of matching users (used by pickers that don't need "load more"). */
+export async function searchUsers(query: string, pageSize = 10) {
   try {
-    const res = await api.get<SearchResponse<UserSearchResult>>(
+    const res = await api.get<CursorEnvelope<UserSearchResult>>(
       "/api/search/user",
-      { params: { query, page, pageSize } },
+      { params: { query, pageSize } },
     );
     return res.data;
   } catch (err) {
     // The backend returns 404 (not an empty list) when nothing matches.
     if (isAxiosError(err) && err.response?.status === 404) {
-      return { result: [], totalCount: 0, currentPage: page, pageSize };
+      return emptyCursorEnvelope<UserSearchResult>();
     }
     throw err;
   }

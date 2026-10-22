@@ -101,7 +101,7 @@ export function SearchSuggestions({
   onInsertPrefix,
 }: SearchSuggestionsProps) {
   const { parsed, enabled, data, isLoading, isError, error, isFetching } =
-    useSearch(query, 1, SUGGESTION_LIMIT);
+    useSearch(query, SUGGESTION_LIMIT);
 
   if (!enabled) {
     if (pending) return <LoadingRows />;

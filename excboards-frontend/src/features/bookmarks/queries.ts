@@ -1,22 +1,15 @@
 import { useCallback } from "react";
-import {
-  keepPreviousData,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { cursorPageParams } from "@/lib/cursorPaging";
 import { updateCachedBoard } from "@/features/boards/cache";
 import { createDebouncedToggle } from "@/lib/debouncedToggle";
 import * as bookmarksApi from "./api";
 
-export function useBookmarkedBoards(
-  page: number,
-  pageSize: number,
-  enabled = true
-) {
-  return useQuery({
-    queryKey: ["bookmarks", page, pageSize],
-    queryFn: () => bookmarksApi.listBookmarkedBoards(page, pageSize),
-    placeholderData: keepPreviousData,
+export function useBookmarkedBoards(pageSize: number, enabled = true) {
+  return useInfiniteQuery({
+    queryKey: ["bookmarks", pageSize],
+    queryFn: ({ pageParam }) => bookmarksApi.listBookmarkedBoards(pageParam, pageSize),
+    ...cursorPageParams,
     enabled,
   });
 }

@@ -1,33 +1,30 @@
-import type { UseQueryResult } from "@tanstack/react-query";
-import { PagePagination } from "@/components/PagePagination";
+import type {
+  InfiniteData,
+  UseInfiniteQueryResult,
+} from "@tanstack/react-query";
+import { LoadMore } from "@/components/LoadMore";
 import { Spinner } from "@/components/ui/spinner";
-import { getErrorMessage, type PagedEnvelope } from "@/lib/api";
+import { getErrorMessage, type CursorEnvelope } from "@/lib/api";
+import { flattenCursorPages } from "@/lib/cursorPaging";
 import { useUsersByIds } from "@/features/profile/queries";
 import type { Board } from "../api";
 import { BoardList } from "./BoardList";
 import type { BoardCardData } from "./BoardCard";
 
-/** A paged board query rendered as cards: owner lookup, loading/error states and pagination. */
-export function PagedBoardList({
+export function LoadMoreBoardList({
   query,
-  page,
-  onPageChange,
-  pageSize,
   emptyMessage,
   errorMessage = "Failed to load boards.",
-  onDelete,
 }: {
-  query: UseQueryResult<PagedEnvelope<Board>>;
-  page: number;
-  onPageChange: (page: number) => void;
-  pageSize: number;
+  query: UseInfiniteQueryResult<InfiniteData<CursorEnvelope<Board>>>;
   emptyMessage: string;
   errorMessage?: string;
-  onDelete?: (id: string) => void | Promise<unknown>;
 }) {
-  const boards = query.data?.result ?? [];
+  const { items: boards, total } = flattenCursorPages(
+    query.data,
+    (board) => board.id
+  );
   const owners = useUsersByIds(boards.map((board) => board.ownerId));
-  const total = query.data?.totalCount ?? 0;
 
   const items: BoardCardData[] = boards.map((board) => {
     const owner = owners[board.ownerId];
@@ -58,16 +55,16 @@ export function PagedBoardList({
           {getErrorMessage(query.error, errorMessage)}
         </p>
       ) : (
-        <BoardList boards={items} emptyMessage={emptyMessage} onDelete={onDelete} />
+        <BoardList boards={items} emptyMessage={emptyMessage} />
       )}
-      {total > pageSize && (
-        <PagePagination
-          page={page}
-          onPageChange={onPageChange}
-          pageSize={pageSize}
-          total={total}
-        />
-      )}
+      <LoadMore
+        shown={items.length}
+        total={total}
+        hasMore={!!query.hasNextPage}
+        loading={query.isFetchingNextPage}
+        onLoadMore={() => query.fetchNextPage()}
+        pagesLoaded={query.data?.pages.length}
+      />
     </section>
   );
 }

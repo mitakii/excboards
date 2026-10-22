@@ -1,8 +1,8 @@
 import { isAxiosError } from "axios";
-import { api, type PagedEnvelope } from "@/lib/api";
+import { api, emptyCursorEnvelope, type CursorEnvelope } from "@/lib/api";
 import type { BoardTag } from "@/features/boards/api";
 
-export type SearchEnvelope<T> = PagedEnvelope<T>;
+export type SearchEnvelope<T> = CursorEnvelope<T>;
 
 /** Mirrors backend Domain.Dto.BoardSummaryDto. */
 export interface BoardSearchResult {
@@ -28,10 +28,6 @@ export interface UserSearchResult {
   profilePictureUrl: string;
 }
 
-function emptyEnvelope<T>(page: number, pageSize: number): SearchEnvelope<T> {
-  return { result: [], totalCount: 0, currentPage: page, pageSize };
-}
-
 /**
  * The backend returns 404 (not an empty list) when a search yields nothing —
  * normalise that to an empty envelope so callers only handle real errors.
@@ -39,39 +35,39 @@ function emptyEnvelope<T>(page: number, pageSize: number): SearchEnvelope<T> {
 async function runSearch<T>(
   resource: "board" | "tag" | "user",
   query: string,
-  page: number,
+  cursor: string | undefined,
   pageSize: number
 ) {
   try {
     const res = await api.get<SearchEnvelope<T>>(`/api/search/${resource}`, {
-      params: { query, page, pageSize },
+      params: { query, cursor, pageSize },
     });
     return res.data;
   } catch (err) {
     if (isAxiosError(err) && err.response?.status === 404) {
-      return emptyEnvelope<T>(page, pageSize);
+      return emptyCursorEnvelope<T>();
     }
     throw err;
   }
 }
 
-export function searchBoards(query: string, page = 1, pageSize = 10) {
-  return runSearch<BoardSearchResult>("board", query, page, pageSize);
+export function searchBoards(query: string, cursor?: string, pageSize = 10) {
+  return runSearch<BoardSearchResult>("board", query, cursor, pageSize);
 }
 
 export function searchBoardsByTags(
   tagNames: string[],
-  page = 1,
+  cursor?: string,
   pageSize = 10
 ) {
   return runSearch<BoardSearchResult>(
     "tag",
     tagNames.join(" "),
-    page,
+    cursor,
     pageSize
   );
 }
 
-export function searchUsers(query: string, page = 1, pageSize = 10) {
-  return runSearch<UserSearchResult>("user", query, page, pageSize);
+export function searchUsers(query: string, cursor?: string, pageSize = 10) {
+  return runSearch<UserSearchResult>("user", query, cursor, pageSize);
 }
