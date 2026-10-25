@@ -81,6 +81,8 @@ builder.Services.AddHangfire(config =>
 
 var app = builder.Build();
 
+app.UseExceptionHandler("/error");
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -95,8 +97,13 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 
-//todo: add auth
-app.MapHangfireDashboard("/hangfire");
+app.MapHangfireDashboard("/hangfire", new DashboardOptions()
+{
+    Authorization = new []
+    {
+        new AuthorizationFilter()
+    }
+});
 
 app.MapControllers();
 app.MapHub<CanvasHub>("/hubs/canvas");

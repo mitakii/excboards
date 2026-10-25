@@ -81,7 +81,7 @@ public class AuthService(
         {
             UserName = username,
             Email = payload.Value.Email,
-            EmailConfirmed = payload.Value.EmailVerified,
+            EmailConfirmed = false,
             ProfilePictureUrl = payload.Value.Picture ?? ""
         };
         

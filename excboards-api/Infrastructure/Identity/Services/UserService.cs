@@ -36,14 +36,11 @@ public class UserService(IUserRepository userRepository, UserManager<User> userM
     }
 
     //settings
-    public async Task<ErrorOr<Updated>> UpdatePfpAsync(Guid userId, IFormFile picture, string password)
+    public async Task<ErrorOr<Updated>> UpdatePfpAsync(Guid userId, IFormFile picture)
     {
         var user = await userManager.FindByIdAsync(userId.ToString());
         if (user is null)
             return Error.NotFound("User.NotFound","User not found");
-
-        if(!await userManager.CheckPasswordAsync(user, password))
-            return  Error.Unauthorized("User.ChangePfp", "Invalid password");
 
         var result = await cloudinaryService.AddPhotoAsync(picture);
         if (result.IsError)
@@ -52,19 +49,16 @@ public class UserService(IUserRepository userRepository, UserManager<User> userM
         user.ProfilePictureUrl = result.Value;
         var updateResult = await userManager.UpdateAsync(user);
         if(!updateResult.Succeeded)
-            return Error.Validation("User.UpdatePfp", result.Errors.First().Description);
+            return Error.Validation("User.UpdatePfp", updateResult.Errors.First().Description);
         
         return Result.Updated;
     }
 
-    public async Task<ErrorOr<Updated>> ChangeUsername(Guid userId, string newUsername, string password)
+    public async Task<ErrorOr<Updated>> ChangeUsername(Guid userId, string newUsername)
     {
         var user = await userManager.FindByIdAsync(userId.ToString());
         if (user is null)
             return Error.NotFound("User.NotFound", "User not found");
-        
-        if (!await userManager.CheckPasswordAsync(user, password))
-            return Error.Unauthorized("User.ChangeUsername","Invalid password");
         
         user.UserName = newUsername;
         var result = await userManager.UpdateAsync(user);
@@ -88,16 +82,39 @@ public class UserService(IUserRepository userRepository, UserManager<User> userM
         return Result.Updated;
     }
 
-    public async Task<ErrorOr<Updated>> ChangeEmail(Guid userId, string newEmail, string password)
+    public async Task<ErrorOr<bool>> HasPasswordAsync(Guid userId)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString());
+        if (user is null)
+            return Error.NotFound("User.NotFound", "User not found");
+
+        return await userManager.HasPasswordAsync(user);
+    }
+    
+    public async Task<ErrorOr<Updated>> SetPassword(Guid userId, string newPassword)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString());
+        if (user is null)
+            return Error.NotFound("User.NotFound", "User not found");
+
+        if (await userManager.HasPasswordAsync(user))
+            return Error.Conflict("User.SetPassword", "Password is already set");
+
+        var result = await userManager.AddPasswordAsync(user, newPassword);
+        if(!result.Succeeded)
+            return Error.Validation("User.SetPassword", result.Errors.First().Description);
+
+        return Result.Updated;
+    }
+
+    public async Task<ErrorOr<Updated>> ChangeEmail(Guid userId, string newEmail)
     {
         var user = await userManager.FindByIdAsync(userId.ToString());
         if (user is null)
             return Error.NotFound("User.NotFound", "User not found");
         
-        if (!await userManager.CheckPasswordAsync(user, password))
-            return Error.Unauthorized("User.ChangeUsername","Invalid password");
-        
         user.Email = newEmail;
+        user.EmailConfirmed = false;
         var result = await userManager.UpdateAsync(user);
         
         if(!result.Succeeded)

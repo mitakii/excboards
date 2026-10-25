@@ -34,6 +34,28 @@ public class UserController(IUserService userService) : ControllerBase
     }
 
     [Authorize]
+    [HttpGet("settings")]
+    public async Task<IActionResult> GetSettings()
+    {
+        var result = await userService.HasPasswordAsync(User.GetUserId());
+        if (result.IsError)
+            return result.ToProblem(this);
+
+        return Ok(new { hasPassword = result.Value });
+    }
+
+    [Authorize]
+    [HttpPost("settings/setPassword")]
+    public async Task<IActionResult> SetPassword(SetPasswordRequest request)
+    {
+        var result = await userService.SetPassword(User.GetUserId(), request.NewPassword);
+        if(result.IsError)
+            return result.ToProblem(this);
+
+        return Ok();
+    }
+
+    [Authorize]
     [HttpPost("settings/changePassword")]
     public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
     {
@@ -50,7 +72,7 @@ public class UserController(IUserService userService) : ControllerBase
     public async Task<IActionResult> ChangeUsername(ChangeUsernameRequest request)
     {
         var result = await userService
-            .ChangeUsername(User.GetUserId(), request.NewUsername, request.Password);
+            .ChangeUsername(User.GetUserId(), request.NewUsername);
 
         if(result.IsError)
             return result.ToProblem(this);
@@ -62,7 +84,7 @@ public class UserController(IUserService userService) : ControllerBase
     public async Task<IActionResult> ChangeEmail(ChangeEmailRequest request)
     {
         var result = await userService
-            .ChangeEmail(User.GetUserId(), request.NewEmail, request.Password);
+            .ChangeEmail(User.GetUserId(), request.NewEmail);
 
         if(result.IsError)
             return result.ToProblem(this);
@@ -74,7 +96,7 @@ public class UserController(IUserService userService) : ControllerBase
     [HttpPost("settings/changePfp")]
     public async Task<IActionResult> ChangePfp([FromForm] ChangePfpRequest request)
     {
-        var result = await userService.UpdatePfpAsync(User.GetUserId(), request.Picture, request.Password);
+        var result = await userService.UpdatePfpAsync(User.GetUserId(), request.Picture);
 
         if(result.IsError)
             return result.ToProblem(this);
