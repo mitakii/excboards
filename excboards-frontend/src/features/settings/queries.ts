@@ -1,6 +1,15 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AUTH_STATUS_KEY } from "@/features/auth/queries";
 import * as settingsApi from "./api";
+
+const SETTINGS_KEY = ["settings"] as const;
+
+export function useAccountSettings() {
+  return useQuery({
+    queryKey: SETTINGS_KEY,
+    queryFn: settingsApi.fetchSettings,
+  });
+}
 
 /** Refresh the token (claims) and refetch everything that shows user info. */
 function useSyncUser() {
@@ -17,8 +26,8 @@ function useSyncUser() {
 export function useChangeUsername() {
   const syncUser = useSyncUser();
   return useMutation({
-    mutationFn: ({ newUsername, password }: { newUsername: string; password: string }) =>
-      settingsApi.changeUsername(newUsername, password),
+    mutationFn: ({ newUsername }: { newUsername: string }) =>
+      settingsApi.changeUsername(newUsername),
     onSuccess: () => syncUser(true),
   });
 }
@@ -26,8 +35,7 @@ export function useChangeUsername() {
 export function useChangeEmail() {
   const syncUser = useSyncUser();
   return useMutation({
-    mutationFn: ({ newEmail, password }: { newEmail: string; password: string }) =>
-      settingsApi.changeEmail(newEmail, password),
+    mutationFn: ({ newEmail }: { newEmail: string }) => settingsApi.changeEmail(newEmail),
     onSuccess: () => syncUser(true),
   });
 }
@@ -39,11 +47,19 @@ export function useChangePassword() {
   });
 }
 
+export function useSetPassword() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ newPassword }: { newPassword: string }) =>
+      settingsApi.setPassword(newPassword),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: SETTINGS_KEY }),
+  });
+}
+
 export function useChangePfp() {
   const syncUser = useSyncUser();
   return useMutation({
-    mutationFn: ({ picture, password }: { picture: File; password: string }) =>
-      settingsApi.changePfp(picture, password),
+    mutationFn: ({ picture }: { picture: File }) => settingsApi.changePfp(picture),
     onSuccess: () => syncUser(false),
   });
 }

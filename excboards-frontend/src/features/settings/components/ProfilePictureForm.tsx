@@ -5,8 +5,7 @@ import { toast } from "sonner";
 import { ImageUpIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { Field, FieldError, FieldGroup } from "@/components/ui/field";
 import { getErrorMessage } from "@/lib/api";
 import { useChangePfp } from "../queries";
 import { PFP_ACCEPT, pfpSchema, type PfpFormValues } from "../schemas";
@@ -25,14 +24,12 @@ export function ProfilePictureForm({
 
   const {
     control,
-    register,
     handleSubmit,
     reset,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<PfpFormValues>({
     resolver: zodResolver(pfpSchema),
-    defaultValues: { password: "" },
   });
 
   const picture = watch("picture");
@@ -52,7 +49,7 @@ export function ProfilePictureForm({
     setSaved(false);
     try {
       await changePfp.mutateAsync(values);
-      reset({ password: "" });
+      reset();
       if (fileInputRef.current) fileInputRef.current.value = "";
       setSaved(true);
     } catch (err) {
@@ -114,16 +111,6 @@ export function ProfilePictureForm({
               />
             </div>
             <FieldError errors={[errors.picture]} />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="pfpPassword">Current password</FieldLabel>
-            <Input
-              id="pfpPassword"
-              type="password"
-              autoComplete="current-password"
-              {...register("password")}
-            />
-            <FieldError errors={[errors.password]} />
           </Field>
           <SettingsSubmit
             label="Update picture"

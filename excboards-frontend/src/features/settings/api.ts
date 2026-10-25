@@ -1,11 +1,20 @@
 import { api } from "@/lib/api";
 
-export async function changeUsername(newUsername: string, password: string) {
-  await api.post("/api/User/settings/changeUsername", { newUsername, password });
+export interface AccountSettings {
+  hasPassword: boolean;
 }
 
-export async function changeEmail(newEmail: string, password: string) {
-  await api.post("/api/User/settings/changeEmail", { newEmail, password });
+export async function fetchSettings() {
+  const res = await api.get<AccountSettings>("/api/User/settings");
+  return res.data;
+}
+
+export async function changeUsername(newUsername: string) {
+  await api.post("/api/User/settings/changeUsername", { newUsername });
+}
+
+export async function changeEmail(newEmail: string) {
+  await api.post("/api/User/settings/changeEmail", { newEmail });
 }
 
 export async function changePassword(oldPassword: string, newPassword: string) {
@@ -15,10 +24,14 @@ export async function changePassword(oldPassword: string, newPassword: string) {
   });
 }
 
-export async function changePfp(picture: File, password: string) {
+/** For accounts created through Google, which have no password yet. */
+export async function setPassword(newPassword: string) {
+  await api.post("/api/User/settings/setPassword", { newPassword });
+}
+
+export async function changePfp(picture: File) {
   const form = new FormData();
   form.append("Picture", picture);
-  form.append("Password", password);
   await api.post("/api/User/settings/changePfp", form);
 }
 

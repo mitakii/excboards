@@ -15,14 +15,12 @@ export const usernameSchema = z.object({
     .string()
     .min(3, "Username must be at least 3 characters")
     .max(32, "Username must be at most 32 characters"),
-  password: currentPassword,
 });
 
 export type UsernameFormValues = z.infer<typeof usernameSchema>;
 
 export const emailSchema = z.object({
   newEmail: z.email("Enter a valid email address"),
-  password: currentPassword,
 });
 
 export type EmailFormValues = z.infer<typeof emailSchema>;
@@ -40,6 +38,18 @@ export const passwordSchema = z
 
 export type PasswordFormValues = z.infer<typeof passwordSchema>;
 
+export const setPasswordSchema = z
+  .object({
+    newPassword,
+    confirmPassword: z.string(),
+  })
+  .refine((v) => v.newPassword === v.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+
+export type SetPasswordFormValues = z.infer<typeof setPasswordSchema>;
+
 export const PFP_MAX_BYTES = 5 * 1024 * 1024;
 export const PFP_ACCEPT = "image/jpeg,image/png,image/webp";
 
@@ -48,7 +58,6 @@ export const pfpSchema = z.object({
     .instanceof(File, { message: "Choose an image" })
     .refine((f) => PFP_ACCEPT.split(",").includes(f.type), "Use a JPEG, PNG or WebP image")
     .refine((f) => f.size <= PFP_MAX_BYTES, "Image must be 5 MB or smaller"),
-  password: currentPassword,
 });
 
 export type PfpFormValues = z.infer<typeof pfpSchema>;

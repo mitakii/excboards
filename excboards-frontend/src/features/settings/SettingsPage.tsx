@@ -4,15 +4,18 @@ import { useUserById } from "@/features/profile/queries";
 import { EmailForm } from "./components/EmailForm";
 import { PasswordForm } from "./components/PasswordForm";
 import { ProfilePictureForm } from "./components/ProfilePictureForm";
+import { SetPasswordForm } from "./components/SetPasswordForm";
 import { UsernameForm } from "./components/UsernameForm";
+import { useAccountSettings } from "./queries";
 
 export function SettingsPage() {
   const { data: user } = useStatus();
   const profile = useUserById(user?.userId);
+  const settings = useAccountSettings();
 
   if (!user) return null;
 
-  if (profile.isLoading) {
+  if (profile.isLoading || settings.isLoading) {
     return (
       <div className="flex flex-1 items-center justify-center py-16 text-muted-foreground">
         <Spinner />
@@ -29,7 +32,7 @@ export function SettingsPage() {
       />
       <UsernameForm currentUsername={user.userName} />
       <EmailForm currentEmail={user.email} />
-      <PasswordForm />
+      {settings.data?.hasPassword === false ? <SetPasswordForm /> : <PasswordForm />}
     </div>
   );
 }

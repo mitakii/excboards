@@ -20,14 +20,14 @@ export function EmailForm({ currentEmail }: { currentEmail: string }) {
     formState: { errors, isSubmitting },
   } = useForm<EmailFormValues>({
     resolver: zodResolver(emailSchema),
-    defaultValues: { newEmail: currentEmail, password: "" },
+    defaultValues: { newEmail: currentEmail },
   });
 
   async function onSubmit(values: EmailFormValues) {
     setSaved(false);
     try {
       await changeEmail.mutateAsync(values);
-      reset({ newEmail: values.newEmail, password: "" });
+      reset({ newEmail: values.newEmail });
       setSaved(true);
     } catch (err) {
       toast.error(getErrorMessage(err, "Couldn't change email."));
@@ -42,16 +42,6 @@ export function EmailForm({ currentEmail }: { currentEmail: string }) {
             <FieldLabel htmlFor="newEmail">New email</FieldLabel>
             <Input id="newEmail" type="email" autoComplete="email" {...register("newEmail")} />
             <FieldError errors={[errors.newEmail]} />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="emailPassword">Current password</FieldLabel>
-            <Input
-              id="emailPassword"
-              type="password"
-              autoComplete="current-password"
-              {...register("password")}
-            />
-            <FieldError errors={[errors.password]} />
           </Field>
           <SettingsSubmit
             label="Change email"

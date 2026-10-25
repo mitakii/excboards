@@ -20,14 +20,14 @@ export function UsernameForm({ currentUsername }: { currentUsername: string }) {
     formState: { errors, isSubmitting },
   } = useForm<UsernameFormValues>({
     resolver: zodResolver(usernameSchema),
-    defaultValues: { newUsername: currentUsername, password: "" },
+    defaultValues: { newUsername: currentUsername },
   });
 
   async function onSubmit(values: UsernameFormValues) {
     setSaved(false);
     try {
       await changeUsername.mutateAsync(values);
-      reset({ newUsername: values.newUsername, password: "" });
+      reset({ newUsername: values.newUsername });
       setSaved(true);
     } catch (err) {
       toast.error(getErrorMessage(err, "Couldn't change username."));
@@ -45,16 +45,6 @@ export function UsernameForm({ currentUsername }: { currentUsername: string }) {
             <FieldLabel htmlFor="newUsername">New username</FieldLabel>
             <Input id="newUsername" autoComplete="username" {...register("newUsername")} />
             <FieldError errors={[errors.newUsername]} />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="usernamePassword">Current password</FieldLabel>
-            <Input
-              id="usernamePassword"
-              type="password"
-              autoComplete="current-password"
-              {...register("password")}
-            />
-            <FieldError errors={[errors.password]} />
           </Field>
           <SettingsSubmit
             label="Change username"

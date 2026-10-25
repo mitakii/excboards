@@ -8,6 +8,15 @@ import { Toaster } from '@/components/ui/sonner'
 import './index.css'
 import App from './App.tsx'
 
+declare global {
+  interface Window {
+    EXCALIDRAW_ASSET_PATH?: string | string[]
+  }
+}
+
+// prod build copies Excalidraw's fonts into dist/fonts (see vite.config.ts); dev uses its CDN default
+if (import.meta.env.PROD) window.EXCALIDRAW_ASSET_PATH = '/'
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
