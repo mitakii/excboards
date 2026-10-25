@@ -24,3 +24,9 @@
 **/appsettings.Development.json
 LICENSE
 README.md
+# not needed in images
+Tests/
+scripts/
+**/*.http
+**/Properties/launchSettings.json
+**/*.DotSettings.user
