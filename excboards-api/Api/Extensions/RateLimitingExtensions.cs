@@ -9,6 +9,8 @@ public static class RateLimitPolicies
 {
     public const string SceneSave = "scene-save";
     public const string UploadUrl = "upload-url";
+    public const string Login = "login";
+    public const string Register = "register";
 }
 
 public static class RateLimitingExtensions
@@ -30,6 +32,10 @@ public static class RateLimitingExtensions
                 PerUserFixedWindow(context, permitLimit: 60, RateLimitPolicies.SceneSave));
             options.AddPolicy(RateLimitPolicies.UploadUrl, context =>
                 PerUserFixedWindow(context, permitLimit: 30,  RateLimitPolicies.UploadUrl));
+            options.AddPolicy(RateLimitPolicies.Login, context =>
+                PerUserFixedWindow(context, permitLimit: 20, RateLimitPolicies.Login));
+            options.AddPolicy(RateLimitPolicies.Register, context =>
+                PerUserFixedWindow(context, permitLimit: 20,  RateLimitPolicies.Register));
         });
         return services;
     }

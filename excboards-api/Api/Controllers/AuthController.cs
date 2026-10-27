@@ -9,6 +9,7 @@ using Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 
 namespace excboards_api.Controllers;
@@ -27,6 +28,7 @@ public class AuthController(
     [AllowAnonymous]
     [HttpPost("register")]
     [ValidateImage(Required = false)]
+    [EnableRateLimiting(RateLimitPolicies.Register)]
     public async Task<IActionResult> Register([FromForm] RegisterRequest request)
     {
         var user = new User { UserName = request.Username, Email = request.Email };
@@ -49,6 +51,7 @@ public class AuthController(
     
     [AllowAnonymous]
     [HttpPost("login")]
+    [EnableRateLimiting(RateLimitPolicies.Login)]
     public async Task<IActionResult> Login(LoginRequest request)
     {
         var result = await authService.LoginAsync(request.Username, request.Password);
@@ -61,6 +64,7 @@ public class AuthController(
 
     [AllowAnonymous]
     [HttpPost("google")]
+    [EnableRateLimiting(RateLimitPolicies.Login)]
     public async Task<IActionResult> GoogleLogin(GoogleLoginRequest request)
     {
         var result = await authService.LoginWithGoogleAsync(request.IdToken);
@@ -75,10 +79,13 @@ public class AuthController(
 
     [AllowAnonymous]
     [HttpPost("google/register")]
+    [EnableRateLimiting(RateLimitPolicies.Register)]
     public async Task<IActionResult> GoogleRegister(GoogleRegisterRequest request)
     {
         var result = await authService.RegisterWithGoogleAsync(request.IdToken, request.Username);
-        if (result.IsError) return result.ToProblem(this);
+        if (result.IsError) 
+            return result.ToProblem(this);
+        
         var register = result.Value;
         Response.SetAuthCookies(register.Tokens.AccessToken, register.Tokens.RefreshToken, _jwtOptions);
         return Ok(new LoginResponse(register.UserId, register.UserName, register.Email));
