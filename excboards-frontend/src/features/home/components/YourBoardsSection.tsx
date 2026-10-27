@@ -9,6 +9,7 @@ import { useUserBoards } from "@/features/boards/queries";
 import { useUserById } from "@/features/profile/queries";
 import type { AuthUser } from "@/features/auth/api";
 import { flattenCursorPages } from "@/lib/cursorPaging";
+import { profilePath } from "@/lib/routes";
 
 const PAGE_SIZE = 6;
 // The home page stays short: after this many loads, link to the profile's full list.
@@ -80,7 +81,7 @@ export function YourBoardsSection({ user }: { user: AuthUser }) {
         onLoadMore={() => boards.fetchNextPage()}
         pagesLoaded={boards.data?.pages.length}
         maxPages={MAX_PAGES}
-        viewAll={{ to: `/${username}`, label: "View all on your profile" }}
+        viewAll={{ to: profilePath(username), label: "View all on your profile" }}
       />
     </section>
   );

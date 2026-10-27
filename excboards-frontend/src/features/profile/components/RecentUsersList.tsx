@@ -5,6 +5,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { profilePath } from "@/lib/routes";
 import { useRecentUsers } from "../queries";
 
 export function RecentUsersList() {
@@ -23,7 +24,7 @@ export function RecentUsersList() {
       {users.map((user) => (
         <SidebarMenuItem key={user.userId}>
           <SidebarMenuButton asChild variant="outline" size="lg">
-            <Link to={`/${user.username}`}>
+            <Link to={profilePath(user.username)}>
               <Avatar>
                 <AvatarFallback>
                   {user.username.slice(0, 2).toUpperCase()}

@@ -35,6 +35,7 @@ import { BookmarkButton } from "@/features/bookmarks/components/BookmarkButton";
 import { LikeButton } from "@/features/likes/components/LikeButton";
 import { useUserById } from "@/features/profile/queries";
 import { getErrorMessage } from "@/lib/api";
+import { profilePath } from "@/lib/routes";
 import { PermissionLevel } from "../api";
 import {
   useBoard,
@@ -337,7 +338,7 @@ function BoardOverviewContent({
           {owner.data ? (
             <DialogClose asChild>
               <Link
-                to={`/${owner.data.username}`}
+                to={profilePath(owner.data.username)}
                 className="flex items-center gap-2 rounded-md px-1 py-0.5 hover:bg-accent"
               >
                 <Avatar size="sm">
@@ -467,7 +468,7 @@ function BoardOverviewContent({
                     {collaborator.username ? (
                       <DialogClose asChild>
                         <Link
-                          to={`/${collaborator.username}`}
+                          to={profilePath(collaborator.username)}
                           className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-0.5 hover:bg-accent"
                         >
                           <Avatar size="sm">

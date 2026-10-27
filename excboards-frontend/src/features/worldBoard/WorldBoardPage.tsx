@@ -2,8 +2,9 @@ import { Link, useLocation, useParams } from "react-router-dom";
 import { ArchiveIcon, LogInIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { NotFound } from "@/components/NotFound";
 import { Spinner } from "@/components/ui/spinner";
-import { getErrorMessage } from "@/lib/api";
+import { getErrorMessage, isNotFoundError } from "@/lib/api";
 import { useStatus } from "@/features/auth/queries";
 import { BoardCanvas } from "@/features/boards/components/BoardCanvas";
 import { formatWorldBoardMonth, WORLD_BOARD_API, type WorldBoard } from "./api";
@@ -22,6 +23,8 @@ export function WorldBoardPage() {
 
   if (board.isLoading) return <CenteredSpinner />;
 
+  if (isNotFoundError(board.error)) return <WorldBoardNotFound />;
+
   if (board.isError || !board.data) {
     return (
       <div className="flex flex-1 items-center justify-center p-8 text-sm text-destructive">
@@ -31,6 +34,15 @@ export function WorldBoardPage() {
   }
 
   return <WorldBoardCanvas key={board.data.id} board={board.data} />;
+}
+
+function WorldBoardNotFound() {
+  return (
+    <NotFound
+      title="World board not found"
+      description="There's no world board here. It may not have been created yet."
+    />
+  );
 }
 
 function CenteredSpinner() {
@@ -47,6 +59,8 @@ function WorldBoardCanvas({ board }: { board: WorldBoard }) {
   const location = useLocation();
 
   if (scene.isLoading || userLoading) return <CenteredSpinner />;
+
+  if (isNotFoundError(scene.error)) return <WorldBoardNotFound />;
 
   if (scene.isError || !scene.data) {
     return (

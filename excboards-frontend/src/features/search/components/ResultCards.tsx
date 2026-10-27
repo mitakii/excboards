@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { profilePath } from "@/lib/routes";
 import type { UserSearchResult } from "../api";
 
 const cardBase =
@@ -13,7 +14,7 @@ export function UserResultCard({
   onSelect?: () => void;
 }) {
   return (
-    <Link to={`/${user.username}`} onClick={onSelect} className={cardBase}>
+    <Link to={profilePath(user.username)} onClick={onSelect} className={cardBase}>
       <Avatar size="sm">
         {user.profilePictureUrl && (
           <AvatarImage src={user.profilePictureUrl} alt={user.username} />

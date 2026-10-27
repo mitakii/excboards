@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { profilePath } from "@/lib/routes";
 import { SEARCH_MODE_LABEL } from "../parseQuery";
 import { useSearch } from "../queries";
 import type { BoardSearchResult, UserSearchResult } from "../api";
@@ -169,7 +170,7 @@ export function SearchSuggestions({
             ? (results as UserSearchResult[]).map((user, index) => (
                 <li key={user.userId}>
                   <Link
-                    to={`/${user.username}`}
+                    to={profilePath(user.username)}
                     onClick={onClose}
                     className={rowClass(index === activeIndex)}
                     {...optionProps(index)}

@@ -99,6 +99,11 @@ api.interceptors.response.use(
   }
 );
 
+/** The backend also answers 404 (not 403) for boards the caller may not view. */
+export function isNotFoundError(err: unknown): boolean {
+  return axios.isAxiosError(err) && err.response?.status === 404;
+}
+
 export function getErrorMessage(err: unknown, fallback: string): string {
   if (!axios.isAxiosError(err)) return fallback;
 

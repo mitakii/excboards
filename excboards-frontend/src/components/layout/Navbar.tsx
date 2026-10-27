@@ -26,6 +26,7 @@ import { getErrorMessage } from "@/lib/api";
 import { useLogout, useStatus } from "@/features/auth/queries";
 import { BoardFormDialog } from "@/features/boards/components/BoardFormDialog";
 import { useUserById } from "@/features/profile/queries";
+import { profilePath } from "@/lib/routes";
 import { Logo } from "./Logo";
 
 export function Navbar({
@@ -99,7 +100,7 @@ export function Navbar({
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>{user.userName}</DropdownMenuLabel>
                   <DropdownMenuItem
-                    onClick={() => navigate(`/${user.userName}`)}
+                    onClick={() => navigate(profilePath(user.userName))}
                   >
                     <UserIcon />
                     Profile

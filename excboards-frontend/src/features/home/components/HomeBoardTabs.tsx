@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AuthUser } from "@/features/auth/api";
+import { profilePath } from "@/lib/routes";
 import { BookmarkedBoardsSection } from "./BookmarkedBoardsSection";
 import { LatestBoardsSection } from "./LatestBoardsSection";
 import { RecentlyViewedSection } from "./RecentlyViewedSection";
@@ -48,7 +49,7 @@ export function HomeBoardTabs({ user }: { user: AuthUser }) {
       <TabsContent value="bookmarked">
         <BookmarkedBoardsSection
           maxPages={3}
-          viewAll={{ to: `/${user.userName}?tab=bookmarks`, label: "View all bookmarks" }}
+          viewAll={{ to: `${profilePath(user.userName)}?tab=bookmarks`, label: "View all bookmarks" }}
         />
       </TabsContent>
     </Tabs>

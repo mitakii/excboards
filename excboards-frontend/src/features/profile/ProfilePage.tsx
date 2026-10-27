@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { NotFound } from "@/components/NotFound";
 import { Spinner } from "@/components/ui/spinner";
-import { getErrorMessage } from "@/lib/api";
+import { getErrorMessage, isNotFoundError } from "@/lib/api";
 import { addRecentUser } from "@/lib/recentUsers";
 import { useStatus } from "@/features/auth/queries";
 import { useUserProfile } from "./queries";
@@ -27,6 +28,10 @@ export function ProfilePage() {
         <Spinner />
       </div>
     );
+  }
+
+  if (isNotFoundError(profile.error)) {
+    return <NotFound title="User not found" description="There's no user with this username." />;
   }
 
   if (profile.isError || !profile.data) {
