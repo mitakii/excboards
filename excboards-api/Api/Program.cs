@@ -6,6 +6,7 @@ using Hangfire;
 using Hangfire.PostgreSql;
 using Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.SignalR.StackExchangeRedis;
 using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
@@ -74,10 +75,18 @@ if (builder.Services.Any(d => d.ServiceType == typeof(IConnectionMultiplexer)))
             options.ConnectionFactory = _ => Task.FromResult(mux));
 }
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 builder.Services.AddHangfire(config => 
     config.UsePostgreSqlStorage(
         builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddExcboardsHealthChecks();
 
 var app = builder.Build();
 
@@ -106,6 +115,7 @@ app.MapHangfireDashboard("/hangfire", new DashboardOptions()
 });
 
 app.MapControllers();
+app.MapExcboardsHealthChecks();
 app.MapHub<CanvasHub>("/hubs/canvas");
 
 app.Run();

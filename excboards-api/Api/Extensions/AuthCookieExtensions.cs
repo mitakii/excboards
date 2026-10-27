@@ -17,6 +17,7 @@ public static class AuthCookieExtensions
         response.Cookies.Append(AuthCookieNames.AccessToken, accessToken, new CookieOptions
         {
             HttpOnly = true,
+            //todo: in prod change to true
             Secure = false, 
             SameSite = SameSiteMode.Lax,
             Domain = domain,
@@ -27,6 +28,7 @@ public static class AuthCookieExtensions
         response.Cookies.Append(AuthCookieNames.RefreshToken, refreshToken, new CookieOptions
         {
             HttpOnly = true,
+            //todo: in prod change to true
             Secure = false,
             SameSite = SameSiteMode.Lax,
             Domain = domain,

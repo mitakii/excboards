@@ -52,11 +52,11 @@ public class S3Storage
         _bucketEnsured = true;
     }
 
-    private async Task<bool> BucketExistsAsync(string bucketName)
+    private async Task<bool> BucketExistsAsync(string bucketName, CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await _client.GetBucketLocationAsync(bucketName);
+            var response = await _client.GetBucketLocationAsync(bucketName,  cancellationToken);
             return true;
         }
         catch (AmazonS3Exception ex)
@@ -66,6 +66,9 @@ public class S3Storage
             throw;
         }
     }
+
+    public async Task<bool> BucketExistsAsync(CancellationToken cancellationToken) 
+        => await BucketExistsAsync(_bucketName, cancellationToken);
 
     public async Task UploadFileAsync(string key, Stream fileStream)
     {
