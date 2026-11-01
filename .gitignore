@@ -251,5 +251,5 @@ logs
 *.log
 
 # Kubernetes
-k8s/secret.yaml
+secret.yaml
 *kubeconfig*.yaml

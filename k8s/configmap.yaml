@@ -21,6 +21,6 @@ data:
   S3__Region: auto
   S3__AutoCreateBucket: "false"
 
-  CloudinarySettings__CloudName: ""
+  # Cloudinary (profile pictures): cloud name + keys live in excboards-secrets
 
   Redis: excboards-redis:6379,abortConnect=false
