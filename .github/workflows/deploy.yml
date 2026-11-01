@@ -1,7 +1,7 @@
 # Test -> build & push images to ghcr.io -> deploy to the k3s cluster over Tailscale.
 #
 # Repo secrets:   TS_OAUTH_CLIENT_ID, TS_OAUTH_SECRET  (Tailscale OAuth client, tag:ci)
-#                 KUBECONFIG                           (github-actions ServiceAccount, see k8s/admin/ci-access.yaml)
+#                 KUBECONFIG                           (github-actions ServiceAccount kubeconfig, base64 -w0; see k8s/admin/ci-access.yaml)
 # Repo variables: VITE_API_BASE_URL                    (e.g. https://api.example.com, baked into the frontend)
 #                 VITE_GOOGLE_CLIENT_ID                (optional)
 name: Deploy
@@ -110,12 +110,14 @@ jobs:
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
 
+      # The KUBECONFIG secret holds the file base64-encoded on one line (base64 -w0),
+      # so pasting it into the GitHub UI can't wrap or mangle it.
       - name: Configure kubectl
         env:
           KUBECONFIG_DATA: ${{ secrets.KUBECONFIG }}
         run: |
           mkdir -p ~/.kube
-          printf '%s\n' "$KUBECONFIG_DATA" > ~/.kube/config
+          printf '%s' "$KUBECONFIG_DATA" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
           kubectl version
 
