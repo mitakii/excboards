@@ -137,10 +137,20 @@ jobs:
           kustomize edit set image excboards-migrations=$REGISTRY/excboards-migrations:$GITHUB_SHA
           kubectl -n excboards delete job excboards-migrate --ignore-not-found --wait=true
           kubectl apply -k .
-          if ! kubectl -n excboards wait --for=condition=complete --timeout=5m job/excboards-migrate; then
-            kubectl -n excboards logs job/excboards-migrate --all-containers || true
-            exit 1
-          fi
+          # Poll instead of `kubectl wait --for=condition=complete` so a failed Job
+          # stops the deploy right away rather than after the full timeout.
+          for _ in $(seq 1 60); do
+            conditions=$(kubectl -n excboards get job excboards-migrate \
+              -o jsonpath='{range .status.conditions[?(@.status=="True")]}{.type}{" "}{end}')
+            case "$conditions" in
+              *Complete*) echo "Migrations applied."; exit 0 ;;
+              *Failed*) break ;;
+            esac
+            sleep 5
+          done
+          echo "Migrations did not complete (conditions: ${conditions:-none})"
+          kubectl -n excboards logs job/excboards-migrate --all-containers || true
+          exit 1
 
       - name: Roll out
         working-directory: k8s

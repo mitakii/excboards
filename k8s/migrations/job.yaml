@@ -29,6 +29,10 @@ spec:
                 secretKeyRef:
                   name: excboards-secrets
                   key: ConnectionStrings__DefaultConnection
+            # efbundle is a single-file app that unpacks itself on start; the default
+            # ($HOME) is read-only here, so use the writable /tmp emptyDir instead
+            - name: DOTNET_BUNDLE_EXTRACT_BASE_DIR
+              value: /tmp
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
