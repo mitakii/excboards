@@ -1,0 +1,54 @@
+# Hangfire server. No HTTP listener, so no probes.
+# Postgres-backed Hangfire locks make >1 replica safe, but 1 is plenty.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: excboards-workers
+  labels:
+    app.kubernetes.io/name: excboards-workers
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: excboards-workers
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: excboards-workers
+    spec:
+      # Cleanup sweeps delete S3 objects; give an in-flight sweep time to stop cleanly
+      terminationGracePeriodSeconds: 120
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1654
+        runAsGroup: 1654
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: workers
+          image: excboards-workers
+          envFrom:
+            - configMapRef:
+                name: excboards-config
+            - secretRef:
+                name: excboards-secrets
+          env:
+            - name: DOTNET_ENVIRONMENT
+              value: Production
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 384Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

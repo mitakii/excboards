@@ -90,6 +90,7 @@ builder.Services.AddExcboardsHealthChecks();
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
 app.UseExceptionHandler("/error");
 
 if (app.Environment.IsDevelopment())

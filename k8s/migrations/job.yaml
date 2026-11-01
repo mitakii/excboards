@@ -1,0 +1,42 @@
+# One-shot EF Core migrations bundle (Dockerfile target "migrations").
+# Jobs are immutable, so delete the previous one before re-applying:
+#   kubectl -n excboards delete job excboards-migrate --ignore-not-found
+#   kubectl apply -k k8s/migrations
+#   kubectl -n excboards wait --for=condition=complete --timeout=5m job/excboards-migrate
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: excboards-migrate
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1654
+        runAsGroup: 1654
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          image: excboards-migrations
+          args: ["--connection", "$(ConnectionStrings__DefaultConnection)"]
+          env:
+            - name: ConnectionStrings__DefaultConnection
+              valueFrom:
+                secretKeyRef:
+                  name: excboards-secrets
+                  key: ConnectionStrings__DefaultConnection
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

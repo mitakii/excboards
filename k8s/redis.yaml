@@ -1,0 +1,68 @@
+# Cache, SignalR backplane and rate-limit counters only -- nothing durable, so no PVC.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: excboards-redis
+  labels:
+    app.kubernetes.io/name: excboards-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: excboards-redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: excboards-redis
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: redis
+          image: redis:7.4-alpine
+          args: ["--save", "", "--appendonly", "no", "--maxmemory", "200mb", "--maxmemory-policy", "allkeys-lru"]
+          ports:
+            - name: redis
+              containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: redis
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: excboards-redis
+spec:
+  selector:
+    app.kubernetes.io/name: excboards-redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis

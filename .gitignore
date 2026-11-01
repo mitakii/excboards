@@ -249,3 +249,7 @@ Desktop.ini
 # Logs
 logs
 *.log
+
+# Kubernetes
+k8s/secret.yaml
+*kubeconfig*.yaml

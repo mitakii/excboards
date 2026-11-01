@@ -1,0 +1,26 @@
+# Non-secret config shared by api + workers. Keys are .NET config paths (":" -> "__").
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: excboards-config
+data:
+  ASPNETCORE_ENVIRONMENT: Production
+
+  JwtOptions__Issuer: https://eapi.mitakiilab.com
+  JwtOptions__Audience: https://excb.mitakiilab.com
+  # Leading dot so the cookie set by eapi. is also sent from excb.
+  JwtOptions__CookieDomain: .mitakiilab.com
+  Cors__AllowedOrigins__0: https://excb.mitakiilab.com
+
+  # TODO: same value as the VITE_GOOGLE_CLIENT_ID repo variable (empty disables Google login)
+  GoogleAuth__ClientId: ""
+
+  # Cloudflare R2. Endpoint + keys live in excboards-secrets (account ID kept out of the public repo).
+  # Bucket CORS must allow https://excb.mitakiilab.com
+  S3__BucketName: excboards
+  S3__Region: auto
+  S3__AutoCreateBucket: "false"
+
+  CloudinarySettings__CloudName: ""
+
+  Redis: excboards-redis:6379,abortConnect=false

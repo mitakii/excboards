@@ -1,0 +1,42 @@
+# Traffic path: browser -> Cloudflare proxy (orange-cloud DNS) -> router port-forward 443
+# -> MetalLB IP -> Traefik "websecure" (:443). Cloudflare SSL mode "Full (strict)".
+#
+# The certificate is a Cloudflare Origin CA cert (SSL/TLS -> Origin Server -> Create
+# certificate, hostnames *.mitakiilab.com), stored once by an admin:
+#   sudo kubectl -n excboards create secret tls excboards-origin-tls \
+#     --cert=origin.pem --key=origin.key
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: excboards
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - excb.mitakiilab.com
+        - eapi.mitakiilab.com
+      secretName: excboards-origin-tls
+  rules:
+    - host: excb.mitakiilab.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: excboards-frontend
+                port:
+                  name: http
+    - host: eapi.mitakiilab.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: excboards-api
+                port:
+                  name: http

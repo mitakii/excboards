@@ -1,0 +1,159 @@
+# Test -> build & push images to ghcr.io -> deploy to the k3s cluster over Tailscale.
+#
+# Repo secrets:   TS_OAUTH_CLIENT_ID, TS_OAUTH_SECRET  (Tailscale OAuth client, tag:ci)
+#                 KUBECONFIG                           (github-actions ServiceAccount, see k8s/admin/ci-access.yaml)
+# Repo variables: VITE_API_BASE_URL                    (e.g. https://api.example.com, baked into the frontend)
+#                 VITE_GOOGLE_CLIENT_ID                (optional)
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io/${{ github.repository_owner }}
+
+jobs:
+  test-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - run: dotnet test excboards-api/Tests/Tests.csproj -c Release
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: excboards-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: excboards-frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+
+  build:
+    needs: [test-api, test-frontend]
+    # PRs only run the tests; images are published from master (or a manual run)
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - image: excboards-api
+            context: excboards-api
+            target: api
+          - image: excboards-workers
+            context: excboards-api
+            target: workers
+          - image: excboards-migrations
+            context: excboards-api
+            target: migrations
+          - image: excboards-frontend
+            context: excboards-frontend
+            target: runtime
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          target: ${{ matrix.target }}
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ matrix.image }}:${{ github.sha }}
+          # only the frontend Dockerfile declares these; the backend ignores them
+          build-args: |
+            VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL }}
+            VITE_GOOGLE_CLIENT_ID=${{ vars.VITE_GOOGLE_CLIENT_ID }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: production
+    # never run two deploys against the cluster at once
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Join tailnet
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Configure kubectl
+        env:
+          KUBECONFIG_DATA: ${{ secrets.KUBECONFIG }}
+        run: |
+          mkdir -p ~/.kube
+          printf '%s\n' "$KUBECONFIG_DATA" > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl version
+
+      - name: Install kustomize
+        run: |
+          if ! command -v kustomize >/dev/null; then
+            curl -fsSL https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz \
+              | sudo tar -xz -C /usr/local/bin kustomize
+          fi
+          kustomize version
+
+      # Before the rollout, so new pods never run against an old schema.
+      # Jobs are immutable, so the previous run's Job is deleted first.
+      - name: Run migrations
+        working-directory: k8s/migrations
+        run: |
+          kustomize edit set image excboards-migrations=$REGISTRY/excboards-migrations:$GITHUB_SHA
+          kubectl -n excboards delete job excboards-migrate --ignore-not-found --wait=true
+          kubectl apply -k .
+          if ! kubectl -n excboards wait --for=condition=complete --timeout=5m job/excboards-migrate; then
+            kubectl -n excboards logs job/excboards-migrate --all-containers || true
+            exit 1
+          fi
+
+      - name: Roll out
+        working-directory: k8s
+        run: |
+          kustomize edit set image \
+            excboards-api=$REGISTRY/excboards-api:$GITHUB_SHA \
+            excboards-workers=$REGISTRY/excboards-workers:$GITHUB_SHA \
+            excboards-frontend=$REGISTRY/excboards-frontend:$GITHUB_SHA
+          kubectl apply -k .
+          for d in excboards-api excboards-workers excboards-frontend; do
+            kubectl -n excboards rollout status deployment/$d --timeout=5m
+          done
+
+      - name: Show state on failure
+        if: failure()
+        run: |
+          kubectl -n excboards get pods -o wide || true
+          kubectl -n excboards get events --sort-by=.lastTimestamp | tail -30 || true

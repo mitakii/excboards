@@ -1,0 +1,15 @@
+# deps and build output are recreated inside the image
+node_modules
+dist
+
+# .env.local holds dev values; Vite would bake them into the production bundle
+.env*
+
+.git
+.gitignore
+.idea
+.vscode
+Dockerfile
+.dockerignore
+*.log
+*.tsbuildinfo

@@ -1,0 +1,90 @@
+# Identity GitHub Actions deploys with. Applied once by a cluster admin, NOT part of
+# the kustomization (CI must not be able to change its own permissions):
+#   sudo kubectl apply -f k8s/namespace.yaml -f k8s/admin/ci-access.yaml
+# Then build the kubeconfig for the KUBECONFIG secret from the token below.
+# Rotate: delete the github-actions-token Secret, re-apply this file, rebuild the kubeconfig.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: github-actions
+  namespace: excboards
+automountServiceAccountToken: false
+---
+# Everything `kubectl apply -k k8s/` and the migrations Job touch, inside excboards only.
+# No access to Secrets: excboards-secrets and the ghcr pull secret are managed by hand.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: deployer
+  namespace: excboards
+rules:
+  - apiGroups: [""]
+    resources: [configmaps, services]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [""]
+    resources: [pods, pods/log, events]
+    verbs: [get, list, watch]
+  - apiGroups: [apps]
+    resources: [deployments]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [apps]
+    resources: [replicasets]
+    verbs: [get, list, watch]
+  - apiGroups: [batch]
+    resources: [jobs]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [policy]
+    resources: [poddisruptionbudgets]
+    verbs: [get, list, watch, create, update, patch, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: github-actions-deployer
+  namespace: excboards
+subjects:
+  - kind: ServiceAccount
+    name: github-actions
+    namespace: excboards
+roleRef:
+  kind: Role
+  name: deployer
+  apiGroup: rbac.authorization.k8s.io
+---
+# Namespaces are cluster-scoped, so the Role above can't cover namespace.yaml, which is
+# part of the kustomization. Allow reading/patching only the excboards namespace itself.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: excboards-namespace-deployer
+rules:
+  - apiGroups: [""]
+    resources: [namespaces]
+    resourceNames: [excboards]
+    verbs: [get, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: github-actions-excboards-namespace
+subjects:
+  - kind: ServiceAccount
+    name: github-actions
+    namespace: excboards
+roleRef:
+  kind: ClusterRole
+  name: excboards-namespace-deployer
+  apiGroup: rbac.authorization.k8s.io
+---
+# Long-lived token for the KUBECONFIG secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-actions-token
+  namespace: excboards
+  annotations:
+    kubernetes.io/service-account.name: github-actions
+type: kubernetes.io/service-account-token

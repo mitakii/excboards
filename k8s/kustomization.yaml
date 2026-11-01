@@ -1,0 +1,25 @@
+# kubectl apply -k k8s/
+# Run k8s/migrations first on every release that adds a migration.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: excboards
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - redis.yaml
+  - api.yaml
+  - workers.yaml
+  - frontend.yaml
+  - ingress.yaml
+
+images:
+  - name: excboards-api
+    newName: ghcr.io/mitakii/excboards-api
+    newTag: latest
+  - name: excboards-workers
+    newName: ghcr.io/mitakii/excboards-workers
+    newTag: latest
+  - name: excboards-frontend
+    newName: ghcr.io/mitakii/excboards-frontend
+    newTag: latest

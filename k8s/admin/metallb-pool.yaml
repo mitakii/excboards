@@ -1,0 +1,29 @@
+# MetalLB address pool for the LAN. Cluster infrastructure, applied once by an admin,
+# AFTER MetalLB itself is installed (it defines the IPAddressPool/L2Advertisement kinds):
+#   sudo kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml
+#   sudo kubectl -n metallb-system wait --for=condition=ready pod -l app=metallb --timeout=120s
+#   sudo kubectl apply -f k8s/admin/metallb-pool.yaml
+# Requires k3s's own load balancer to be off (--disable=servicelb).
+#
+# The range must be outside the router's DHCP range and unused by any machine.
+# k3s's Traefik (a LoadBalancer Service) gets the first free address: 192.168.100.240,
+# which is the router's port-forward target for 443.
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: lan
+  namespace: metallb-system
+spec:
+  addresses:
+    - 192.168.100.240-192.168.100.250
+---
+# Announce the pool on the LAN via ARP (layer 2): one node answers for each IP and
+# another takes over within seconds if it goes down.
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: lan
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - lan
