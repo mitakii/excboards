@@ -2,5 +2,5 @@ namespace Infrastructure.Identity;
 
 public class RefreshTokenCleanupOptions
 {
-    public int RefreshTokenCleanupPeriodInDays { get; set; }
+    public int RefreshTokenCleanupPeriodInDays { get; set; } = 1;
 }
