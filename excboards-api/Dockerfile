@@ -33,8 +33,12 @@ RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
       -o /app/publish /p:UseAppHost=false
 
 FROM build AS publish-migrations
+# The NuGet cache mount isn't part of the cached image layers, so on a fresh CI runner
+# it can be empty even when the restore layer above is a cache hit. `dotnet publish`
+# re-restores on its own; `ef migrations bundle` doesn't, so restore explicitly here.
 RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
-    dotnet tool restore \
+    dotnet restore Workers/Workers.csproj -a $TARGETARCH \
+ && dotnet tool restore \
  && RID=$([ "$TARGETARCH" = "amd64" ] && echo linux-x64 || echo linux-$TARGETARCH) \
  && dotnet ef migrations bundle \
       --project Infrastructure/Infrastructure.csproj \
