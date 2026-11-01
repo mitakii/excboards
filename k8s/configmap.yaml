@@ -13,7 +13,7 @@ data:
   Cors__AllowedOrigins__0: https://excb.mitakiilab.com
 
   # TODO: same value as the VITE_GOOGLE_CLIENT_ID repo variable (empty disables Google login)
-  GoogleAuth__ClientId: ""
+  GoogleAuth__ClientId: "90742236697-nt94j3u3qsrfnk7c2d1ed6j519p1tgr5.apps.googleusercontent.com"
 
   # Cloudflare R2. Endpoint + keys live in excboards-secrets (account ID kept out of the public repo).
   # Bucket CORS must allow https://excb.mitakiilab.com
