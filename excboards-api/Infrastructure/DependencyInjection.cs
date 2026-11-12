@@ -1,3 +1,4 @@
+using Application.Sitemap;
 using Application.Auth;
 using Application.Boards;
 using Application.Bookmarks;
@@ -126,6 +127,7 @@ public static class InfrastructureServiceCollectionExtensions
         builder.Services.AddScoped<IWorldBoardRepository, WorldBoardRepository>();
         builder.Services.AddScoped<ILikeRepository, BoardLikeRepository>();
         builder.Services.AddScoped<IBoardBookmarkRepository, BoardBookmarkRepository>();
+        builder.Services.AddScoped<ISitemapRepository, SitemapRepository>();
 
         return builder;
     }
@@ -141,6 +143,8 @@ public static class InfrastructureServiceCollectionExtensions
         builder.Services.AddScoped<WorldBoardService>();
         builder.Services.AddScoped<BookmarkService>();
         builder.Services.AddScoped<LikeService>();
+        builder.Services.Configure<SitemapOptions>(builder.Configuration.GetSection("Sitemap"));
+        builder.Services.AddScoped<SitemapService>();
 
         // only needed for CachedPermissionService as internal
         builder.Services.AddScoped<PermissionService>();

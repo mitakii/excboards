@@ -11,6 +11,8 @@ data:
   # Leading dot so the cookie set by eapi. is also sent from excb.
   JwtOptions__CookieDomain: .mitakiilab.com
   Cors__AllowedOrigins__0: https://excb.mitakiilab.com
+  # Public frontend origin used for <loc> URLs in /sitemap.xml
+  Sitemap__SiteUrl: https://excb.mitakiilab.com
 
   # TODO: same value as the VITE_GOOGLE_CLIENT_ID repo variable (empty disables Google login)
   GoogleAuth__ClientId: "90742236697-nt94j3u3qsrfnk7c2d1ed6j519p1tgr5.apps.googleusercontent.com"

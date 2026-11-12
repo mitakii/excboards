@@ -4,6 +4,7 @@ import { NotFound } from "@/components/NotFound";
 import { Spinner } from "@/components/ui/spinner";
 import { getErrorMessage, isNotFoundError } from "@/lib/api";
 import { addRecentUser } from "@/lib/recentUsers";
+import { usePageMeta } from "@/lib/usePageMeta";
 import { useStatus } from "@/features/auth/queries";
 import { useUserProfile } from "./queries";
 import { ProfileBoardTabs } from "./components/ProfileBoardTabs";
@@ -20,6 +21,20 @@ export function ProfilePage() {
     if (profile.data && !isOwnProfile) addRecentUser(profile.data.username);
   }, [profile.data, isOwnProfile]);
 
+  const userNotFound = isNotFoundError(profile.error);
+  usePageMeta(
+    userNotFound
+      ? { title: "User not found — excboards", noindex: true }
+      : profile.data
+        ? {
+            title: `${profile.data.username} — excboards`,
+            description: `Excalidraw boards by ${profile.data.username} on excboards. Member since ${new Date(
+              profile.data.createdAtUtc
+            ).toLocaleDateString("en-US", { month: "long", year: "numeric" })}.`,
+          }
+        : {}
+  );
+
   if (!username) return null;
 
   if (profile.isLoading) {
@@ -30,7 +45,7 @@ export function ProfilePage() {
     );
   }
 
-  if (isNotFoundError(profile.error)) {
+  if (userNotFound) {
     return <NotFound title="User not found" description="There's no user with this username." />;
   }
 
