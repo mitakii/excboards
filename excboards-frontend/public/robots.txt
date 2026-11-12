@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /settings
+Disallow: /login
+Disallow: /register
+Disallow: /signup/
+
+Sitemap: https://excb.mitakiilab.com/sitemap.xml

@@ -1,14 +1,53 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- ?v= busts browsers' favicon cache; bump it when the icon changes -->
     <link rel="icon" href="/favicon.ico?v=2" sizes="48x48" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="/favicon-32.png?v=2"
+    />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>excboards</title>
+    <title>excboards — draw, share and collaborate on Excalidraw boards</title>
+    <meta
+      name="description"
+      content="excboards is a free place to create hand-drawn style diagrams and sketches on Excalidraw boards. Draw together with friends in real time, publish and tag your boards, discover boards from other users, and join the shared monthly World board that anyone can draw on."
+    />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="excboards" />
+    <meta
+      property="og:title"
+      content="excboards — draw, share and collaborate on Excalidraw boards"
+    />
+    <meta
+      property="og:description"
+      content="Create Excalidraw boards, draw together in real time, publish and discover boards from other users, and join the shared monthly World board."
+    />
+    <meta
+      property="og:image"
+      content="https://excb.mitakiilab.com/apple-touch-icon.png"
+    />
+    <meta name="twitter:card" content="summary" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "excboards",
+        "url": "https://excb.mitakiilab.com/",
+        "description": "Create, share and collaborate on Excalidraw boards in real time.",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://excb.mitakiilab.com/search?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      }
+    </script>
     <script>
       (function () {
         var stored = localStorage.getItem("excboards-theme");

@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { getErrorMessage, isNotFoundError } from "@/lib/api";
 import { addRecentBoard } from "@/lib/recentBoards";
+import { usePageMeta } from "@/lib/usePageMeta";
 import { useStatus } from "@/features/auth/queries";
-import { BOARDS_API } from "./api";
+import { useUserById } from "@/features/profile/queries";
+import { BOARDS_API, type Board } from "./api";
 import { useBoard, useBoardCollaborators, useBoardScene } from "./queries";
 import { BoardCanvas } from "./components/BoardCanvas";
 import { BoardOverviewDialog } from "./components/BoardOverviewDialog";
@@ -25,6 +27,7 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
   const scene = useBoardScene(boardId);
   const collaborators = useBoardCollaborators(boardId);
   const { data: user, isLoading: statusLoading } = useStatus();
+  const owner = useUserById(board.data?.ownerId);
 
   const realtimeEnabled = (collaborators.data?.length ?? 0) > 0;
 
@@ -47,6 +50,15 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
     if (board.data) addRecentBoard(board.data.id);
   }, [board.data]);
 
+  const boardNotFound = isNotFoundError(board.error) || isNotFoundError(scene.error);
+  usePageMeta(
+    boardNotFound
+      ? { title: "Board not found — excboards", noindex: true }
+      : board.data
+        ? boardMeta(board.data, owner.data?.username)
+        : {}
+  );
+
   // wait for login status and collaborators too, so the canvas opens in the right
   // mode instead of flipping between editable and read-only
   if (board.isLoading || scene.isLoading || collaborators.isLoading || statusLoading) {
@@ -57,7 +69,7 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
     );
   }
 
-  if (isNotFoundError(board.error) || isNotFoundError(scene.error)) {
+  if (boardNotFound) {
     return (
       <NotFound
         title="Board not found"
@@ -128,4 +140,17 @@ function ViewBoardCanvas({ boardId }: { boardId: string }) {
       </ExcalidrawMiscToolPortal>
     </BoardCanvas>
   );
+}
+
+function boardMeta(board: Board, ownerName: string | undefined) {
+  const byline = ownerName ? ` by ${ownerName}` : "";
+  const tags = board.tags.length
+    ? ` Tags: ${board.tags.map((t) => `#${t.name}`).join(", ")}.`
+    : "";
+  return {
+    title: `${board.name}${byline} — excboards`,
+    description:
+      board.description?.trim() ||
+      `${board.name} — an Excalidraw board${byline} on excboards.${tags}`,
+  };
 }
